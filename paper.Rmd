@@ -1,0 +1,1126 @@
+---
+title: |
+  |
+  | \vspace{1cm}Truth and bias: Biased findings^[Corresponding author: Bernhard Clemm von Hohenberg, bernhard.clemm@eui.eu. I am grateful to Paul Bauer, Aleksandra Cichocka, Diego Gambetta, Andrew Guess, Jennifer Jerit and John Jost for valuable feedback.]\vspace{0.5cm}
+  |
+  |
+author: |
+  | Bernhard Clemm von Hohenberg (EUI)
+date: |
+  |       
+  |
+  | `r gsub("^0", "", format(Sys.time(), "%d %B, %Y"))`
+  |
+abstract: \noindent\setstretch{1}Differences in cognitive styles and information processing across ideological groups have been a recurring theme in political science and psychology. The recent debate about “fake news” has brought attention to the question whether US liberals and conservatives differ in how they evaluate the truth of information. Researchers have asked, first, whether one group is better at discerning true from false information (truth discernment), and second, whether liberals and conservatives are driven to different degrees by the congruence of information with their ideological dispositions (assimilation bias). The paradigmatic designs to study these question require selecting or constructing informational stimuli. As I show empirically with two robustness tests and one extended replication of previous studies, this selection/construction necessarily affects the (a)symmetries that researchers find. I claim that when there is no justification whether the selection/construction represents some universe of real-world information, we should be wary of results about asymmetries. I conclude that, ideally, studies must find ways to randomly sample stimuli from the target population of information.\vspace{.8cm}
+linestretch: 1
+colorlinks: true
+# abstract: \noindent\setstretch{1}Lorem ipsum\vspace{.8cm}
+bibliography: references.bib
+csl: american-political-science-association.csl
+output:
+  bookdown::pdf_document2:
+    includes:
+      in_header: header.tex
+    toc: no
+    keep_tex: true
+fontsize: 12pt
+link-citations: true
+documentclass: article
+geometry: margin = 1in
+always_allow_html: yes
+
+---
+
+```{r setup, include = FALSE}
+
+# Knitr options
+knitr::opts_chunk$set(cache = TRUE,
+                      echo = FALSE,
+                      concordance = TRUE,
+                      fig.pos = 'H',
+                      warning = FALSE,
+                      message = FALSE)
+# Packages
+library(tidyverse)
+library(magrittr)
+library(grf)
+library(ggplot2)
+library(ggpubr)
+library(rstatix)
+library(rlist)
+library(survey)
+library(car)
+library(stargazer)
+library(modmarg)
+library(scales)
+library(gridExtra)
+library(grid)
+
+# Set locale
+Sys.setlocale("LC_ALL", "en_US.UTF-8")
+
+```
+
+```{r functions}
+
+roundr <- function(value) {
+  return(format(round(value, digits = 2), nsmall = 2))
+}
+
+roundr_abs <- function(value) {
+  return(format(round(abs(value), digits = 2), nsmall = 2))
+}
+
+
+```
+
+\newpage
+
+# Introduction {#sec:introduction}
+
+Differences in cognitive styles, motivational needs and moral dispositions across socio-political groups have been of interest to political science and psychology for over half a century [@Adornoetal1950; @Rokeach1960]. A large variety of studies have examined---and led to controversial debate about---whether and how conservatives and liberals, in particular in the US, differ on traits such as cognitive rigidity [@Jostetal2003; @Kahan2016b], overconfidence [@OrtolevaSnowberg2015], intelligence [@Heavenetal2011; @Carl2014], moral values [@Altemeyer1996; @Haidt2012] or political tolerance [@Snidermanetal1989; @CrawfordPilanski2014].
+
+The over-arching question in this paper is whether conservatives and liberals differently evaluate the truth of the information they receive. More specifically, ideological groups could differ, first, in their *truth discernment* capacity, that is, their ability to tell true from false information. This issue has become especially pertinent with the debate around "fake news" and its suspected role in the US elections 2016 [@Lazeretal2018]. Some observational studies suggest that conservatives are exposed to and disseminate more misinformation on social media [@Barbera2018; @Guessetal2019], but controlled studies about asymmetries in believing true and false information are ambiguous [@AllcottGentzkow2017; @PennycookRand2019b]. 
+
+Second, conservatives and liberals could be affected differently by the information's congruence with their ideological predispositions. This tendency---which I will refer to as *assimilation bias*---is well-documented as a general phenomenon [@Lordetal1979; @GerberGreen1999; @Kahan2016b]. But whether assimilation bias is unequally distributed across the ideological divide is less clear. Although a recent meta study concluded that "bias is bipartisan" [@Dittoetal2018a], the discussion whether this conclusion is warranted is ongoing [@BaronJost2018; @Dittoetal2018b]. 
+
+Both concepts---assimilation bias and truth discernment---have been studied with variants of the same paradigmatic design: Researchers confront subjects with one or more information items such as news reports that are coded as true or false, and/or as congruent with either liberal or conservative positions. They then ask participants to indicate whether they believe the information to be true or accurate. In the first variant, several information items are selected as they have been published in the real world ("information selection design"). In the second variant, subjects are exposed to one of two opposite items, constructed to be identical except for the ideological position with which they are congruent ("information construction design"). Although both designs typically balance the quantity of true and false information items, as well as conservative-congruent and liberal-congruent content, there is mostly no justification of how the selection of construction of stimuli relates to the real-world universe of information.
+
+As I show in this paper, this deficiency prevents us from drawing robust conclusions about ideological asymmetries because any (a)symmetry detected depends on the informational stimulus. I run robustness tests on three peer-reviewed studies to illustrate this issue. I selected papers that (1) provide findings about ideological asymmetries, at least implicitly; and (2) make their data and materials readily accessible. To check the robustness of the information selection design, I randomly exclude information items multiple times in the studies by @PennycookRand2019a and by @AllcottGentzkow2017, and test how this affects the resulting (a)symmetry each time. This shows, for example, how excluding the headline that "The musicians Beyoncé and Jay Z appeared at a rally in support of Hillary Clinton" changes results. To check the robustness of the information construction design, I replicate the study of @Crawfordetal2013, adding a more extreme version of one the original treatments. In all three cases, it shows that had the researchers constructed or selected a different set of information items in a no less justified way, they would have found different asymmetries.
+
+A caveat about the causality of ideologies: The main interest of this paper is in asymmetries between conservatives and liberals, understood as self-defined groups. This does not mean that any asymmetry found is *caused* by ideology. As research across the social sciences has shown, individual ideology can be explained by more deep-seated traits such as personality [@Adornoetal1950; @Altemeyer1996; @Gerberetal2010], social position [@SidaniusPratto2001; @Jostetal2004] or biology [@Alfordetal2005; @Settleetal2009]. Ideologies evolve constantly, sometimes change abruptly, and it is therefore likely that the ideal-typical conservative or liberal of today is different from the past. However, the focus on self-reported ideology is important on a descriptive level insofar the academic debate about it persists [cf. @Dittoetal2018a]
+
+The paper proceeds as follows. The focus of Section \@ref(sec:discernment) is on truth discernment. In Section \@ref(sec:discernment-lit), I discuss why we would expect conservatives and liberals to differ in their truth discernment capacity and summarize the most direct tests of asymmetries in Section \@ref(sec:discernment-tests). In Section \@ref(sec:discernment-robust), I replicate a recent study and check its robustness against variation of the informational stimulus. I turn to assimilation bias in Section \@ref(sec:bias). In Sections \@ref(sec:bias-lit) and \@ref(sec:bias-tests), I discuss the literature and empirical evidence on asymmetries in assimilation bias, before again examining two relevant studies for robustness of their results in Section \@ref(sec:bias-robust). In Section \@ref(sec:qualitative), I provide a more substantive understanding of how inclusion/exclusion of information items affects results. Finally, I discuss this problem in relation to external validity in experimental social science in Section \@ref(sec:conclusion).
+
+# Truth discernment {#sec:discernment} 
+
+What citizens learn and know about politics has a long tradition in social science research [@Lippmann1922; @Schumpeter1942; @Neumann1986]. Differences in knowledge has mostly been studied along socio-demographic lines. If the ideology of citizens is considered, it is mostly to show that partisan commitments *does* influence factual knowledge, not so much how such influence *differs* across ideological groups [@Bartels2002; @JeritBarabas2012; @Jones2019]. What is more a large part of scholarship has focused on static knowledge [@CarpiniKeeter1996]. In contrast, the question of interest in this paper, namely how citizens *evaluate* the truth of factual information, and how this relates to ideology, is more recent. By "factual", I mean to information that refers to an objective state of the world and can be either true or false. Truth discernment is the degree to which someone believes true factual information more than false factual information.
+
+## Expectations about asymmetries {#sec:discernment-lit} 
+
+Expectations about asymmetries in truth discernment may be motivated by several literatures. First, political sophistication could play a role. If one ideological group had higher levels of political knowledge, they might also be better at telling true from false information. The literature on political knowledge provides only scarce and inconclusive evidence: For example, @McClintockTurner1962 find higher levels of knowledge among Democrats, but @CarpiniKeeter1996 [, p. 173] report higher levels of knowledge among strong Republicans than strong Democrats. Insofar as education increases political sophistication and is associated to ideology, this could be another path towards ideological asymmetries, but the relationship between education and ideology seems to depend on the issue domain [@Phelanetal1995; @Gelmanetal2010; @Gerberetal2010; @Marshall2015]. 
+
+A second argument might focus on the substance of misinformation. Anecdotal evidence suggests that misinformation often alludes to conspiracy theories or science denial. If these contents constituted a large part of misinformation, and certain ideological groups were more receptive to them, asymmetries would ensue. Some scholars argue that conspirational worldviews serve epistemic and relational needs more typically found in US conservatives [@Jostetal2018; @Douglasetal2017]. Indeed, conservatives have been found to be more likely to endorse conspiracy theories [@GarrettWeeks2017; @Milleretal2016]. Similarly, conservatives have shown a higher tendency to science denial [@LewandowskyOberauer2016]. This implies that conservatives are less able to distinguish truth from falsehood.
+ 
+Observational studies offer insights about the consumption and diffusion of misinformation across partly lines. Conservatives in the US have been found to share more false news on Twitter [@Barbera2018] and Facebook [@Guessetal2019], and also to more likely visit fake news websites [@Guessetal2018]. It is not exactly clear that this means they also believe falsehoods more than liberals, as sharing and believing seem to be distinct outcomes [@BauerClemm2019; @Pennycooketal2019b]. However, it could mean that misinformation is disproportionately congruent with a conservative ideological outlook, and since ideological congruence tends to make people believe, conservatives might be less discerning.
+
+## Empirical tests of asymmetries {#sec:discernment-tests} 
+
+Recent empirical studies test asymmetries in truth discernment directly. They typically compile false headlines or news reports from fact-checking web sites and true headlines from mainstream sources. Results are mixed: While some studies find that conservatives are worse at telling false from true information [@Swireetal2017; @AllcottGentzkow2017; @Rossetal2019; @PennycookRand2019a; @PennycookRand2019b] other findings are more ambiguous [@SurmaOliver2018; @Faragoetal2019; @Pennycooketal2020a; @Pennycooketal2020]. I will refer to the design of these studies as the *information selection design*. While researchers mostly balance the information in terms of truth, exposing subjects an equal number of true and false headlines, there is mostly no further theoretical justification of how the choice was made. In some studies, the choice of stimuli depends on their online reach [e.g. @AllcottGentzkow2017], but it remains unclear to what extent this allows to generalize to larger population of news that could have been used. 
+
+## Robustness check of a truth discernment study {#sec:discernment-robust} 
+
+A recent study by @PennycookRand2019a tests various hypotheses, for example, to what extent truth discernment correlates with cognitive reflection. As a secondary question, the authors consider ideological asymmetries. In Study 2, they ask a sample of US subjects to rate the accuracy of twelve true and twelve false news headlines. Half of the headlines are pretested as congruent for Democrats, half of them as congruent for Republicans.^[The ideological comparison in the study is between Democrats and Republicans, so I will refer to this dimension rather than liberal-conservative.] The authors run a two-way ANOVA of individual truth discernment scores (z-scored average of belief in true minus z-scored average of belief in false news) on individual ideology and ideological valence of the information. A significant main effect of individual partisanship leads the authors to conclude that "Clinton supporters were better able to discern fake from real news across the full range of items than Trump supporters" (p. 7). 
+
+In the following, I show that this conclusion is not robust against picking a different subset of news items---while maintaining a balance between true and false, and between Republican-- and Democrat--congruent news. In a good part of these alternative selection scenarios, a different conclusion would have emerged. As there is no reason why these alternatives would have been less justifiable, I contend that the authors' conclusion about an asymmetry does not stand on firm grounds. It is worth emphasizing that the conclusion is only a minor result in the paper next to a rich set of findings---however, one that is already being cited as evidence about ideological asymmetries [e.g. @Quinnetal2020; @Burgeretal2020; @RuischStern2020].
+
+```{r pr20192-data}
+
+# Data from: https://osf.io/tuw89/ -> https://osf.io/f5dgh/
+
+pr20192_data <- read.csv("data/Pennycook & Rand (Study 2).csv")
+
+# Recreate truth discernment scores
+
+pr20192_fake_dem_reports <- c("Fake7_2", "Fake8_2", "Fake9_2", 
+                      "Fake10_2", "Fake11_2", "Fake12_2")
+pr20192_fake_rep_reports <- c("Fake1_2", "Fake2_2", "Fake3_2", 
+                      "Fake4_2", "Fake5_2", "Fake6_2") 
+
+pr20192_true_dem_reports <- c("Real7_2", "Real8_2", "Real9_2", 
+                      "Real10_2", "Real11_2", "Real12_2")
+pr20192_true_rep_reports <- c("Real1_2", "Real2_2", "Real3_2", 
+                      "Real4_2", "Real5_2", "Real6_2")
+
+## Non-z-scored discernment scores: Only needed for replication of Fig 7 and left plot below
+
+pr20192_data %<>% 
+  mutate(fake_dem_average = rowMeans(select(., pr20192_fake_dem_reports), na.rm = TRUE))
+pr20192_data %<>% 
+  mutate(true_dem_average = rowMeans(select(., pr20192_true_dem_reports), na.rm = TRUE))
+pr20192_data %<>% 
+  mutate(fake_rep_average = rowMeans(select(., pr20192_fake_rep_reports), na.rm = TRUE))
+pr20192_data %<>% 
+  mutate(true_rep_average = rowMeans(select(., pr20192_true_rep_reports), na.rm = TRUE))
+
+pr20192_data %<>% mutate(dem_discernment = (true_dem_average - fake_dem_average)/4)
+pr20192_data %<>% mutate(rep_discernment = (true_rep_average - fake_rep_average)/4)
+
+pr20192_data %<>% 
+  mutate(fake_average = rowMeans(select(., pr20192_fake_rep_reports, 
+                                        pr20192_fake_dem_reports), na.rm = TRUE))
+pr20192_data %<>% 
+  mutate(true_average = rowMeans(select(., pr20192_true_rep_reports, 
+                                         pr20192_true_dem_reports), na.rm = TRUE))
+
+## Z-scored discernment scores
+
+pr20192_data %<>% 
+  mutate(fake_dem_average_z = 
+           scale(rowMeans(select(., pr20192_fake_dem_reports), na.rm = TRUE)),
+         true_dem_average_z = 
+           scale(rowMeans(select(., pr20192_true_dem_reports), na.rm = TRUE)),
+         fake_rep_average_z = 
+           scale(rowMeans(select(., pr20192_fake_rep_reports), na.rm = TRUE)),
+         true_rep_average_z = 
+           scale(rowMeans(select(., pr20192_true_rep_reports), na.rm = TRUE)),
+         dem_discernment_z = (true_dem_average_z - fake_dem_average_z),
+         rep_discernment_z = (true_rep_average_z - fake_rep_average_z),
+         fake_average_z =
+           scale(rowMeans(select(., pr20192_fake_rep_reports, 
+                                 pr20192_fake_dem_reports), na.rm = TRUE)),
+         true_average_z = 
+           scale(rowMeans(select(., pr20192_true_rep_reports,  
+                                 pr20192_true_dem_reports), na.rm = TRUE)),
+         discernment_z = true_average_z - fake_average_z)
+
+# Check whether computation of scores is correct
+## cor(pr20192_data$fake_average_z, pr20192_data$ZFake) # correlation of 1
+## cor(pr20192_data$true_average_z, pr20192_data$ZReal) # correlation of 1
+## cor(pr20192_data$discernment_z, pr20192_data$Discernment) # correlation of 1
+## cor(pr20192_data$fake_dem_average_z, pr20192_data$ZFake_L) # correlation of 1
+## cor(pr20192_data$true_dem_average_z, pr20192_data$ZReal_L) # correlation of 1
+## cor(pr20192_data$dem_discernment_z, pr20192_data$L_Discernment) # correlation of 1
+## cor(pr20192_data$fake_rep_average_z, pr20192_data$ZFake_C) # correlation of 1
+## cor(pr20192_data$true_rep_average_z, pr20192_data$ZReal_C) # correlation of 1
+## cor(pr20192_data$rep_discernment_z, pr20192_data$C_Discernment) # correlation of 1
+
+```
+
+```{r pr20192-functions}
+
+pr20192_discernment_ttest <- function(data) {
+  
+  discernment_test <<- data %>% 
+    mutate(id = 1:nrow(.)) %>%
+    convert_as_factor(ClintonTrump) %>%
+    select(c(ClintonTrump, id, discernment_z)) %>% 
+    t.test(discernment_z ~ ClintonTrump, data = .)
+  
+  discernment_dem <<- discernment_test$estimate[["mean in group 1"]]
+  discernment_rep <<- discernment_test$estimate[["mean in group 2"]]
+  discernment_diff <<- discernment_rep - discernment_dem
+  
+  discernment_ttest_t <<- discernment_test$statistic[[1]]
+  discernment_ttest_p <<- discernment_test$p.value
+
+}
+
+pr20192_discernment_valence_anova <- function(data) {
+  
+  discernment_valence_aov <<- data %>% 
+    filter(!is.na(ClintonTrump)) %>%
+    mutate(id = 1:nrow(.)) %>%
+    select(c(ClintonTrump, id, dem_discernment_z, rep_discernment_z)) %>% 
+    convert_as_factor(id, ClintonTrump) %>% 
+    pivot_longer(cols = c(dem_discernment_z, rep_discernment_z), 
+               names_to = "Valence", values_to = "Belief")%>% 
+    anova_test(Belief ~ ClintonTrump*Valence + Error(id/Valence), data = .)
+  
+  discernment_anova_F <<- discernment_valence_aov[1, "F"]
+  discernment_anova_p <<- discernment_valence_aov[1, "p"]
+  
+}
+
+```
+
+```{r pr20192-original}
+
+# Replication of original results
+
+## Figure 7 (p.7)
+
+pr20192_original_plot <- pr20192_data %>% 
+  mutate(id = 1:nrow(pr20192_data)) %>%
+  select(c(ClintonTrump, id, dem_discernment, rep_discernment)) %>% 
+  filter(!is.na(ClintonTrump)) %>%
+  convert_as_factor(ClintonTrump) %>%
+  group_by(ClintonTrump) %>%
+  get_summary_stats(dem_discernment, rep_discernment, type = "common") %>% 
+  ggplot(aes(x = variable, y = mean, fill = ClintonTrump)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  geom_errorbar(aes(ymin = mean-ci, ymax = mean + ci),
+                width=.2, position = position_dodge(.9)) +
+  ylim(0, 0.3) + labs(x = "", y = "") + 
+  scale_fill_manual(values = c("blue", "red"),
+                    labels = c("Clinton", "Trump")) +
+  scale_x_discrete(labels = c("Democrat-consistent", 
+                              "Republican-consistent")) +
+  theme_light() + 
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank()) 
+
+## ANOVA p. 7: 
+### "media truth discernment scores were entered into a 2 (Political valence: Democrat-consistent, Republican-consistent) × 2 (Ideology: Clinton support, Trump support) mixed design ANOVA"
+
+pr20192_discernment_valence_anova(pr20192_data)
+discernment_anova_F_repl <- discernment_anova_F
+discernment_anova_p_repl <- discernment_anova_p
+rm(discernment_valence_aov, discernment_anova_F, discernment_anova_p)
+
+## T-test on overall discernment scores
+
+pr20192_discernment_ttest(pr20192_data)
+discernment_ttest_t_repl <- discernment_ttest_t
+discernment_ttest_p_repl <- discernment_ttest_p
+rm(discernment_test, discernment_dem, discernment_rep, discernment_diff, 
+   discernment_ttest_t, discernment_ttest_p)
+
+```
+
+```{r pr20192-robust}
+
+# Robustness check
+
+## Random re-sampling mechanism
+
+k <- 4 # Number of reports sampled from each type: fake/true*rep/dem
+# n_theory <- choose(6, k)^4 # theoretical number of different samples
+n <- 500 # Number of new samples
+
+pr20192_resampled <- data.frame(sample = 1:n,
+                                          discernment_dem = NA,
+                                          discernment_rep = NA,
+                                          discernment_diff = NA,
+                                          discernment_ttest_p = NA)
+pr20192_samples <- data.frame(matrix(ncol = k * 4))
+
+set.seed(1404)
+
+for (i in 1:n) {
+  
+  # Sample reports out of each of four categories 
+  pr20192_fake_dem_reports_sample <- sample(pr20192_fake_dem_reports, k, replace = FALSE)
+  pr20192_true_dem_reports_sample <- sample(pr20192_true_dem_reports, k, replace = FALSE)
+  pr20192_fake_rep_reports_sample <- sample(pr20192_fake_rep_reports, k, replace = FALSE)
+  pr20192_true_rep_reports_sample <- sample(pr20192_true_rep_reports, k, replace = FALSE)
+  reports_sample <- c(pr20192_fake_dem_reports_sample, pr20192_true_dem_reports_sample, 
+                      pr20192_fake_rep_reports_sample, pr20192_true_rep_reports_sample) 
+  
+  # Compute discernment scores
+  pr20192_data_resampled <- pr20192_data %>% 
+    mutate(fake_dem_average_z = 
+             scale(rowMeans(select(., pr20192_fake_dem_reports_sample), na.rm = TRUE)),
+           true_dem_average_z = 
+             scale(rowMeans(select(., pr20192_true_dem_reports_sample), na.rm = TRUE)),
+           fake_rep_average_z = 
+             scale(rowMeans(select(., pr20192_fake_rep_reports_sample), na.rm = TRUE)),
+           true_rep_average_z = 
+             scale(rowMeans(select(., pr20192_true_rep_reports_sample), na.rm = TRUE)),
+           dem_discernment_z = (true_dem_average_z - fake_dem_average_z),
+           rep_discernment_z = (true_rep_average_z - fake_rep_average_z),
+           fake_average_z =
+             scale(rowMeans(select(., pr20192_fake_rep_reports_sample, 
+                                   pr20192_fake_dem_reports_sample), na.rm = TRUE)),
+           true_average_z = 
+             scale(rowMeans(select(., pr20192_true_rep_reports_sample,
+                                   pr20192_true_dem_reports_sample), na.rm = TRUE)),
+           discernment_z = true_average_z - fake_average_z)
+
+  # t-test
+  pr20192_discernment_ttest(pr20192_data_resampled)
+  
+  # Populate data frame of results
+  pr20192_resampled[i, "discernment_dem"] <- discernment_dem
+  pr20192_resampled[i, "discernment_rep"] <- discernment_rep
+  pr20192_resampled[i, "discernment_diff"] <- discernment_diff
+  pr20192_resampled[i, "discernment_ttest_p"] <- discernment_ttest_p
+
+  pr20192_samples[i, ] <- reports_sample
+}
+
+pr20192_resampled %<>%
+  mutate(sig = ifelse(discernment_ttest_p < 0.05, TRUE, FALSE),
+         cons_better = ifelse(discernment_diff > 0, TRUE, FALSE))
+
+pr20192_prop_sig <- prop.table(table(pr20192_resampled$sig))[["TRUE"]]
+
+pr20192_prop_sig_con <- prop.table(table(pr20192_resampled$cons_better[pr20192_resampled$sig == TRUE]))[["TRUE"]]
+
+# Store headline subsamples as dummies  
+
+pr20192_samples %<>% 
+  mutate(index = 1:nrow(.)) %>%
+  pivot_longer(cols = starts_with("X"), 
+                        names_to = "name", values_to = "value") %>%
+  pivot_wider(names_from = "value") %>%
+  mutate_at(vars(c(starts_with("Fake"), starts_with("Real"))), 
+            ~ ifelse(!is.na(.), 1, 0)) %>%
+  group_by(index) %>%
+  summarise_at(vars(c(starts_with("Fake"), starts_with("Real"))), sum)
+
+pr20192_resampled <- cbind(pr20192_resampled, pr20192_samples)
+# save(pr20192_resampled, file="pr20192_resampled.Rda")
+
+```
+
+I start by replicating the study's original result. To focus on truth discernment per se (irrespective of ideological valence of the information), I first provide a simple graphic illustrating the result that Trump voters are worse at discerning the truth than Clinton voters in the left panel of Figure \@ref(fig:pr20192-plots). It plots the average belief of headlines, grouped by individual partisanship and ideological valence of the information. One can see that truth discernment is slightly greater among Clinton voters. Testing individual truth discernment scores against partisanship with a t-test reveals that this difference is significant (t = `r roundr(discernment_ttest_t_repl)`, p = `r roundr(discernment_ttest_p_repl)`). Alternatively, entering individual truth discernment scores into a two-by-two mixed ANOVA, as in the original paper, yields a significant main effect for ideology (F = `r roundr(discernment_anova_F_repl)`, p = `r roundr(discernment_anova_p_repl)`). 
+
+Would these results have survived a variation of the stimulus? It is impossible to get data---for the same participants at the same period---on believing *other* items that might have been included in the survey. But imagine the authors would have used four out of the six headlines of each category, thus still balancing true versus false headlines and liberal--congruent vs. conservative--congruent. From a conceptual point, this would have been no less justifiable since we do not know how the individual headlines were selected and how they relate to the real--world universe of news at the time of the study. 
+
+I therefore reproduced the results after repeated random sampling of four out of six headlines from each category. The right panel of Figure \@ref(fig:pr20192-plots) shows the distribution of truth discernment differences between Trump voters and Clinton voters for `r n` random sub-samples. Positive values mean that Trump voters are more discerning, negative values that Clinton voters are more discerning. The portion of differences that are significant according to the same t-test as reported above are shown in dark. Overall, in `r roundr(pr20192_prop_sig*100)` percent of sub-samples, a significant difference emerges, but in `r roundr(pr20192_prop_sig_con*100)` percent of these cases Trump voters are more truth-discerning. See the Appendix for results under different specifications, e.g. sampling five out of six items out of each category, and running the original ANOVA instead of a t-test. These specifications yield the same basic result. 
+
+Thus, had the authors chosen a slightly different set of informational stimuli, in a large number of cases they would have concluded that there was no ideological asymmetry. The Appendix also reports results for the same robustness analysis of Study 1 in the paper by @PennycookRand2019a. In this case, the asymmetry *does* survive the same random sub-sampling procedure. However, as also discussed in the Appendix, the sets of items in Study 1 and Study 2 widely overlap: The authors kept some items but exchanged and added others. The fact that this made the results less robust further supports the argument that conclusions about asymmetries are vulnerable to the selection of stimuli. 
+
+```{r pr20192-plots-chunk, fig.cap="Replication of Pennycook and Rand (2019)\\label{fig:pr20192-plots}", out.extra = '', fig.pos= "ht"}
+
+# Plotting truth discernment as partisanship-by-report-type group means 
+
+pr20192_discernment <- pr20192_data %>% 
+  mutate(id = 1:nrow(pr20192_data)) %>%
+  select(c(ClintonTrump, id, fake_average, true_average)) %>% 
+  filter(!is.na(ClintonTrump)) %>%
+  convert_as_factor(ClintonTrump) %>%
+  group_by(ClintonTrump) %>%
+  get_summary_stats(fake_average, true_average, type = "common")
+
+lab_con <- paste("diff. = ", as.character(pr20192_discernment[2, "mean"] - pr20192_discernment[1, "mean"]))
+lab_lib <- paste("diff. = ", as.character(pr20192_discernment[4, "mean"] - pr20192_discernment[3, "mean"]))
+
+pr20192_discernment_plot <- pr20192_discernment %>% 
+  ggplot(aes(x = ClintonTrump, y = mean, fill = variable)) +
+  geom_bar(stat="identity", position = position_dodge()) + 
+  geom_errorbar(aes(ymin = mean-ci, ymax = mean + ci),
+                width=.2, position = position_dodge(.9)) +
+  ggplot2::annotate(geom = "text", x=0.7, y=3,
+                    label = lab_con,
+                    size = 3, hjust=0, vjust=1) +
+  ggplot2::annotate(geom="text", x=1.7, y=3,
+                    label = lab_lib,
+                    size = 3, hjust=0, vjust=1) +
+  labs(x = "", y = "Belief", fill = "Truth") +
+  scale_fill_manual(values = c("grey70", "grey30"),
+                    labels = c("False", 
+                               "True")) +
+  scale_x_discrete(labels = c("Clinton voters",
+                              "Trump voters")) +
+  scale_y_continuous(limits = c(1, 4), oob = rescale_none) + 
+  theme_light() + 
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank()) 
+
+# Plotting histogram of re-sampled statistics 
+
+pr20192_resampled_plot <- ggplot(pr20192_resampled, 
+                                    aes(discernment_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 1/100) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", "Yes")) +
+  xlim(-0.45, 0.45) + 
+  labs(x = "Differences (neg.: Clinton voters more discerning)", 
+       y = "Frequency", fill = "95%-Significance",
+       size = 9) +
+  theme_light() 
+
+ggarrange(pr20192_discernment_plot, 
+          pr20192_resampled_plot,
+          legend = "bottom")
+
+```
+
+# Assimilation bias {#sec:bias} 
+
+Evidently, the truth value of information does not only determine whether people believe it. Ever since the experiments by @HastorfCantril1951, and by @Lordetal1979, it has become a staple of political science and psychology that people evaluate information more favorably when is in line with their preferred conclusions---a tendency often called assimilation bias [@HoustonFazio1989; @DittoLopez1992; @MacCoun1998; @TaberLodge2006; @Crawfordetal2013; @Kahanetal2017b].^[Note that some have questioned whether the phenomenon in question should be termed "bias", as it might be explicable by rational processes alone [e.g. @GerberGreen1999]. See further below for a brief discussion. As I am agnostic about the reasons for the phenomenon in this paper, I use the common term "assimilation bias".] More specifically, I speak of assimilation bias to describe the tendency to believe factual information more when it is congruent with one's ideological positions than when it is incongruent with one's positions.^[Terms alternative to congruence include consonance, consistence or congeniality.] 
+
+Note that asymmetries in truth discernment do not necessarily say anything about asymmetries in assimilation bias. If one ideological group is more discerning of the truth, that does not mean that it is less biased. At least in theory, it is possible to imagine that one group is more truth discerning and less biased, or the other way around, especially since there are many factors that drive believing information independent of ideology, such as fluency [cf. @BrashierMarsh2020; @Schwarzetal2016].
+
+## Theories about asymmetries {#sec:bias-lit} 
+
+There are different ideas about whether the effect of congruence on belief varies across the ideological spectrum. Proponents of the "asymmetry hypothesis" describe conservatism as "motivated social cognition" linked to several cognitive tendencies that might enhance assimilation bias [@Jostetal2003]. For example, the correlation of conservatism and dogmatism, described as the "need to ward off threatening aspects of reality" [@Rokeach1960, p. 67] suggests that conservatives are more likely to denigrate information not congruent with their preexisting ideological commitments. A higher prevalence of a need for closure among conservatives [@WebsterKruglanski1994; @Jostetal1999; @Golec2002] bears out similar expectations, just as a higher level of threat sensitivity [@Hibbingetal2014; @LilienfeldLatzman2014] and a lower degree of cognitive reflection or analytic thinking do [@Pennycooketal2012; @Iyeratal2012; but @Kahan2013b].
+
+A different perspective holds that insofar assimilation bias is product of motivated cognition, it will occur no matter one's political position. Given the evidence for self- and group-enhancing biases across populations and societal groups [@BilligTajfel1973; @Kunda1990; @Ditto2009; @MercierSperber2011], proponents of the "symmetry hypothesis" question that liberals are immune to this tendency and emphasize that any reasoning about politics is affected by motivational bias, even though on different issues [@Grahametal2013; @Brandtetal2014]. Some also point out that the causal nexus between certain psychological traits and outcomes in information processing is not stringent [@Nisbetetal2015]. 
+
+The role of rationality and cognitive sophistication in assimilation bias further complicates predictions about asymmetries. Some who interpret evidence of assimilation bias as a product of motivated reasoning argue that cognitive reflection may actually enhances bias, as it provides the mental resources to come up with with reasons why uncomfortable information "cannot" be true [@Kahan2013b; @Kahan2016b]. In contrast, another argument suggests that the evidence related to assimilation bias in fact does not show any "bias", but can be construed in terms of rational Bayesian updating [@GerberGreen1999; @Hill2017; @Tappinetal2019]. In this account, disbelieving incongruent information can be explained by the large discrepancy with one's prior beliefs, believing congruent information by a closer proximity to priors. Some empirical studies find support for this claim [@Tappinetal2018; to some extent @Hill2017]. Insofar as rationality as cognitive sophistication is indeed more prevalent in liberals, this would suggest an asymmetry in assimilation "bias".
+
+## Empirical tests of assimilation bias {#sec:bias-tests} 
+
+Two designs are commonly applied to test assimilation bias. First, the information selection design already described above: Study participants are exposed to a number of real-world news items and asked to judge their truth, a design especially prominent in recent studies motivated by the debate on "fake news". In fact, many recent studies test truth discernment and assimilation bias together, examining who is most susceptible to false information *and* how much belief of information is driven by congruence. Typically, researchers pretest a set of information in terms of ideological congruence and then balance the number of news items in terms of congruence. Recent studies using this design are inconclusive: Some studies do not find any asymmetry [@AllcottGentzkow2017; @Faragoetal2019; @Pennycooketal2020a], others suggest greater assimilation bias among conservatives [@PennycookRand2019b; @Arendtetal2019]. As I show below in Section \@ref(sec:replication2), the magnitude of effects depends on the chosen stimuli.
+
+A second design, inspired by early research on information processing in psychology, constructs opposite stimuli that are identical except for their ideological congruence. In this *information construction design*, the information items are often motivated by a actual news reports, but are manipulated and have never been published in the real world. These studies have shown the existence of assimilation bias in many contexts and forms, but few have explicitly tested its magnitude across different ideological groups. A recent meta study by @Dittoetal2018a aims to uncover implicitly measured magnitudes and for this purpose reviews 51 experimental studies. Defining bias more generally as the "general tendency for people to think or act in ways that unwittingly favor their own political group or cast their own ideologically based beliefs in a favorable light", the study reveals that "bias is bipartisan", i.e. symmetric. 
+
+A closer look at @Dittoetal2018a reveals that the studies reviewed cover a diversity of psychological processes. A first type of process reviewed concerns the *evaluation of policy proposals or arguments* depending on partisan sponsorship [@Druckman2001c; @Cohen2003; @MalkaLelkes2010; @Bullock2011; @HawkinsNosek2012; @Smithetal2012; @Bergan2012; @Bolsenetal2014; @Crawfordetal2014; @Smith2014; @CiukYost2016; @Mullinix2016]. Another type could be summarized as the *evaluation of moral misbehavior*: Subjects typically judge contentious behavior by politicians, activists or institutions less severe when committed by "their" side [@ClaasenEnsley2016; @ChristensonKriner2017; @Kahanetal2012a; @CrawfordXhambazi2015; @Furgesonetal2008a; @Furgesonetal2008b; @Kopkoetal2011; @Kahanetal2016]. Only a part of the studies address assimilation bias as defined above, i.e. the tendency to judge the truth or methodological validity of factual information depending on its congruence [@Lordetal1979; @MacCounPaletz2009; @Crawfordetal2013; @Kahan2013b; @Liu2013; @MunroMunro2014; @ScurichShniderman2014; @Kahanetal2017b].^[The review contains some further studies that are difficult to categorize: @Kahanetal2011; @Crawford2012; @Crawfordetal2015; @Kahanetal2017a; @Tannenbaumetal2017. It is unclear what we can learn about the different phenomena by summarizing them under one umbrella. They might be driven by quite different underlying psychological traits. For example, some scholars would argue that the effect of partisan endorsement is a rational "information shortcut" [@Downs1957; @Popkin1991; @Snidermanetal1991], whereas assimilation bias could be attributed to motivational rather than rational foundations, as discussed above. Insofar as the traits driving these processes differ between ideological groups, we would not expect to find similar asymmetries.] 
+
+Even if one reran the meta review just for the studies testing assimilation bias, I contend that the design does not allow us to draw any robust conclusions about ideological asymmetries. Again, the underlying reason for this deficiency is the unclear relation of the stimulus to the real universe of information. As researchers construct two information items with opposite factual content, they in effect create two different factual "worlds", and the magnitude of assimilation bias depends on the how believable subjects find each of these worlds. Replicating and extending a recent study in Section \@ref(sec:replication3) will illustrate this argument empirically.
+
+## Robustness checks: Assimilation bias {#sec:bias-robust} 
+
+### Information selection design {#sec:replication2} 
+
+```{r ag2017-data}
+
+ag2017_data <- read.csv(file = "data/PostElectionSurvey.csv",
+                       stringsAsFactors = FALSE, 
+                       encoding = "UTF-8")
+
+# Exclude independents like in original paper
+
+ag2017_data %<>% filter(Independent == 0)
+ag2017_data %<>% mutate(ThoughtTrue_NS = ThoughtTrue_Yes) %>%
+  mutate(ThoughtTrue_NS = ifelse(ThoughtTrue == "Not sure", 0.5, ThoughtTrue_NS))
+
+```
+
+```{r ag2017-functions, include = FALSE}
+
+ag2017_m1 <- function(data) {
+  
+  design <- svydesign(id = ~Custom1, weights = ~SampleWeight, data = data)
+  
+  m1 <<- svyglm(ThoughtTrue_NS ~ Republican:ArticleProTrump + 
+                 Democrat:ArticleProClinton + Democrat + Republican + 0, 
+               design = design)
+  
+  m1_bias_con_coeff <<- m1$coefficients["Republican:ArticleProTrump"]
+  m1_bias_lib_coeff <<- m1$coefficients["Democrat:ArticleProClinton"]
+  m1_bias_diff <<- m1_bias_con_coeff - m1_bias_lib_coeff
+  
+  m1_bias_diff_p <<- linearHypothesis(m1, 
+  "Republican:ArticleProTrump = Democrat:ArticleProClinton")[2, 4]
+}
+
+ag2017_m2 <- function(data) {
+  
+    design <- svydesign(id = ~Custom1, weights = ~SampleWeight, data = data)
+    
+    m2 <<- svyglm(ThoughtTrue_NS ~ Aligned + Democrat + 
+                              Republican + 0, 
+                            design = design)
+}
+
+ag2017_m3 <- function(data) {
+  
+  design <- svydesign(id = ~Custom1, weights = ~SampleWeight, data = data)
+
+  m3 <<- svyglm(ThoughtTrue_NS ~ Aligned*Republican +
+                          Aligned*lnMediaMinutesPerDay + 
+                          Aligned*SocialMediaMostImportant +  
+                          Aligned*UseSocialMedia + 
+                          Aligned*ShareFriendsPrefSame + 
+                          Aligned*Educ_Years + 
+                          Aligned*Undecided + 
+                          Aligned*Age + 
+                          Democrat + Republican +  0, 
+                          design = design)
+  
+  m3_pred <- marg(m3, var_interest = "Aligned", 
+                  at = list("Republican" = c(0, 1)),
+                  type = "effects")
+  m3_pred_congruent_lib <<- m3_pred$`Republican = 0`[2, "Margin"]
+  m3_pred_congruent_con <<- m3_pred$`Republican = 1`[2, "Margin"]
+  m3_pred_congruent_diff <<- m3_pred_congruent_con - m3_pred_congruent_lib
+
+  m3_congruent_coeff_p <<- coef(summary(m3))["Aligned:Republican", "Pr(>|t|)"]
+}
+
+ag2017_ttest <- function(data) {
+  
+  data_bias <- ag2017_data %>% 
+    select(ArticleProClinton, Democrat, Custom1, ThoughtTrue_NS) %>%
+    convert_as_factor(ArticleProClinton, Democrat) %>%
+    group_by(ArticleProClinton, Custom1) %>% 
+    mutate(mean = mean(ThoughtTrue_NS)) %>%
+    select(-ThoughtTrue_NS) %>%
+    distinct() %>%
+    group_by(Custom1) %>%
+    mutate(n = n()) %>%
+    filter(n == 2) %>%
+    mutate(congruent = mean[ArticleProClinton == Democrat], 
+           incongruent = mean[ArticleProClinton != Democrat],
+           bias = congruent - incongruent) %>%
+    select(Democrat, Custom1, bias) %>%
+    distinct() %>% ungroup() %>% as.data.frame() 
+  
+  data_bias_summ <- data_bias %>% 
+    group_by(Democrat) %>% get_summary_stats(bias, type = "mean")
+  bias_lib <<- data_bias_summ$mean[data_bias_summ$Democrat == 1]
+  bias_con <<- data_bias_summ$mean[data_bias_summ$Democrat == 0]
+  bias_diff <<- bias_con - bias_lib
+  
+  bias_test <<- data_bias %>% 
+    t.test(bias ~ Democrat, data = .)
+  bias_test_p <<- bias_test$p.value
+
+}
+
+```
+
+```{r ag2017-original, include = FALSE}
+
+# Replication of original results
+
+## Table 2 in paper
+
+### Model 1 (left column)
+
+ag2017_m1(ag2017_data)
+ag2017_m1_con_original <- m1_bias_con_coeff
+ag2017_m1_lib_original <- m1_bias_lib_coeff
+ag2017_m1_diff_p <- m1_bias_diff_p
+
+### Model 2 (middle column)
+
+ag2017_m2(ag2017_data)
+
+### Model 3 (right column)
+
+ag2017_m3(ag2017_data)
+ag2017_pred_congruent_con_original <- m3_pred_congruent_con
+ag2017_pred_congruent_con_original <- m3_pred_congruent_con
+
+## Tests of group averages
+### This calculates difference in belief of congruent and incongruent stories for each individual, and compares average among conservatives and liberals with t-test
+
+ag2017_ttest(ag2017_data)
+ag2017_bias_ttest_con_original <- bias_con
+ag2017_bias_ttest_lib_original <- bias_lib
+ag2017_bias_ttest_p_original <- bias_test_p
+
+```
+
+```{r ag2017-robust1}
+
+# Re-sampling by excluding one of five categories
+
+ag2017_exclusions <- data.frame(excluded = c("big fake", "big true",
+                                            "small fake", "small true",
+                                            "placebo"),
+                                            bias_lib = NA,
+                                            bias_con = NA,
+                                            bias_diff = NA,
+                                            bias_test_p = NA,
+                                            m1_bias_diff = NA,
+                                            m1_bias_diff_p = NA)
+
+## Exclude big fake
+
+ag2017_data_excluded <- ag2017_data %>% filter(ArticleType != "BigFake")
+
+### Check if same number of pro-Clinton and pro-Trump articles
+# table(ag2017_data_excluded$ArticleProClinton, 
+#       ag2017_data_excluded$ArticleShort, exclude = NULL) 
+
+ag2017_ttest(ag2017_data_excluded)
+ag2017_m1(ag2017_data_excluded)
+
+ag2017_exclusions[1, "bias_lib"] <- bias_lib
+ag2017_exclusions[1, "bias_con"] <- bias_con
+ag2017_exclusions[1, "bias_diff"] <- bias_diff
+ag2017_exclusions[1, "bias_test_p"] <- bias_test_p
+ag2017_exclusions[1, "m1_bias_diff"] <- m1_bias_diff
+ag2017_exclusions[1, "m1_bias_diff_p"] <- m1_bias_diff_p
+
+## Exclude big true
+
+ag2017_data_excluded <- ag2017_data %>% filter(ArticleType != "BigTrue")
+
+### Check if same number of pro-Clinton and pro-Trump articles
+# table(ag2017_data_excluded$ArticleProClinton,
+#       ag2017_data_excluded$ArticleShort, exclude = NULL)
+
+ag2017_ttest(ag2017_data_excluded)
+ag2017_m1(ag2017_data_excluded)
+
+ag2017_exclusions[2, "bias_lib"] <- bias_lib
+ag2017_exclusions[2, "bias_con"] <- bias_con
+ag2017_exclusions[2, "bias_diff"] <- bias_diff
+ag2017_exclusions[2, "bias_test_p"] <- bias_test_p
+ag2017_exclusions[2, "m1_bias_diff"] <- m1_bias_diff
+ag2017_exclusions[2, "m1_bias_diff_p"] <- m1_bias_diff_p
+
+## Exclude small fake
+
+ag2017_data_excluded <- ag2017_data %>% filter(X_A_CheckedFalse == 0)
+
+### Check if same number of pro-Clinton and pro-Trump articles
+# table(ag2017_data_excluded$ArticleProClinton,
+#       ag2017_data_excluded$ArticleShort, exclude = NULL)
+
+ag2017_ttest(ag2017_data_excluded)
+ag2017_m1(ag2017_data_excluded)
+
+ag2017_exclusions[3, "bias_lib"] <- bias_lib
+ag2017_exclusions[3, "bias_con"] <- bias_con
+ag2017_exclusions[3, "bias_diff"] <- bias_diff
+ag2017_exclusions[3, "bias_test_p"] <- bias_test_p
+ag2017_exclusions[3, "m1_bias_diff"] <- m1_bias_diff
+ag2017_exclusions[3, "m1_bias_diff_p"] <- m1_bias_diff_p
+
+## Exclude small true
+
+ag2017_data_excluded <- ag2017_data %>% filter(X_A_CheckedTrue == 0)
+
+### Check if same number of pro-Clinton and pro-Trump articles
+# table(ag2017_data_excluded$ArticleProClinton,
+#       ag2017_data_excluded$ArticleShort, exclude = NULL)
+
+ag2017_ttest(ag2017_data_excluded)
+ag2017_m1(ag2017_data_excluded)
+
+ag2017_exclusions[4, "bias_lib"] <- bias_lib
+ag2017_exclusions[4, "bias_con"] <- bias_con
+ag2017_exclusions[4, "bias_diff"] <- bias_diff
+ag2017_exclusions[4, "bias_test_p"] <- bias_test_p
+ag2017_exclusions[4, "m1_bias_diff"] <- m1_bias_diff
+ag2017_exclusions[4, "m1_bias_diff_p"] <- m1_bias_diff_p
+
+## Exclude placebo
+
+ag2017_data_excluded <- ag2017_data %>% filter(ArticleType != "FakeFake")
+
+### Check if same number of pro-Clinton and pro-Trump articles
+# table(ag2017_data_excluded$ArticleProClinton,
+#       ag2017_data_excluded$ArticleShort, exclude = NULL)
+
+ag2017_ttest(ag2017_data_excluded)
+ag2017_m1(ag2017_data_excluded)
+
+ag2017_exclusions[5, "bias_lib"] <- bias_lib
+ag2017_exclusions[5, "bias_con"] <- bias_con
+ag2017_exclusions[5, "bias_diff"] <- bias_diff
+ag2017_exclusions[5, "bias_test_p"] <- bias_test_p
+ag2017_exclusions[5, "m1_bias_diff"] <- m1_bias_diff
+ag2017_exclusions[5, "m1_bias_diff_p"] <- m1_bias_diff_p
+
+```
+
+```{r ag2017-robust2}
+
+# Random re-sampling mechanism
+
+ag2017_lib_reports <- 
+  names(table(ag2017_data$ArticleShort[ag2017_data$ArticleProClinton == 1]))
+ag2017_con_reports <- 
+  names(table(ag2017_data$ArticleShort[ag2017_data$ArticleProClinton == 0]))
+
+k <- 10 # Number of stories sampled
+# n_theory <- choose(15, k)^2 # theoretical number of different samples
+n <- 500 # Number of new samples
+
+ag2017_resampled <- data.frame(sample = 1:n,
+                                   bias_lib = NA,
+                                   bias_con = NA,
+                                   bias_diff = NA,
+                                   bias_test_p = NA,
+                                   m1_bias_diff = NA,
+                                   m1_bias_diff_p = NA,
+                                   m3_pred_congruent_lib = NA,
+                                   m3_pred_congruent_con = NA,
+                                   m3_pred_congruent_diff = NA,
+                                   m3_congruent_coeff_p = NA)
+
+ag2017_samples <- data.frame(matrix(ncol = k * 2))
+
+set.seed(42)
+for (i in 1:n) {
+  
+  lib_reports_sample <- sample(ag2017_lib_reports, k)
+  con_reports_sample <- sample(ag2017_con_reports, k)
+  reports_sample <- c(lib_reports_sample, con_reports_sample)
+  
+  ag2017_data_resampled <- ag2017_data %>% filter(ArticleShort %in% reports_sample)
+  
+  # T-test 
+  
+  ag2017_ttest(ag2017_data_resampled)
+
+  # Regressions
+  
+  ag2017_m1(ag2017_data_resampled)
+  
+  ag2017_m3(ag2017_data_resampled)
+  
+  # Populate data frame
+  
+  ag2017_resampled[i, "bias_lib"] <- bias_lib
+  ag2017_resampled[i, "bias_con"] <- bias_con
+  ag2017_resampled[i, "bias_diff"] <- bias_diff
+  ag2017_resampled[i, "bias_test_p"] <- bias_test_p
+  ag2017_resampled[i, "m1_bias_diff"] <- m1_bias_diff
+  ag2017_resampled[i, "m1_bias_diff_p"] <- m1_bias_diff_p
+  ag2017_resampled[i, "m3_pred_congruent_lib"] <- m3_pred_congruent_lib
+  ag2017_resampled[i, "m3_pred_congruent_con"] <- m3_pred_congruent_con
+  ag2017_resampled[i, "m3_congruent_coeff_p"] <- m3_congruent_coeff_p
+  ag2017_resampled[i, "m3_pred_congruent_diff"] <- m3_pred_congruent_diff
+  
+  ag2017_samples[i, ] <-  reports_sample
+}
+
+bias_test_p_sig <- 
+  nrow(ag2017_resampled[ag2017_resampled$bias_test_p < 0.05,]) # 369
+m1_bias_diff_p_sig <- 
+  nrow(ag2017_resampled[ag2017_resampled$m1_bias_diff_p < 0.05,]) # 254
+m3_congruent_coeff_p_sig <- 
+  nrow(ag2017_resampled[ag2017_resampled$m3_congruent_coeff_p < 0.05,]) # 269
+
+# Headline subsets as dummies 
+
+ag2017_samples %<>% 
+  mutate(index = 1:nrow(.)) %>%
+  pivot_longer(cols = starts_with("X"), 
+                        names_to = "name", values_to = "value") %>%
+  pivot_wider(names_from = "value") %>%
+  mutate_at(vars(-c("index", "name")), 
+            ~ ifelse(!is.na(.), 1, 0)) %>%
+  group_by(index) %>%
+  summarise_at(vars(-c("name")), sum)
+
+ag2017_resampled <- cbind(ag2017_resampled, ag2017_samples)
+
+# save(ag2017_resampled, file="ag2017_resampled.Rda")
+
+```
+
+To examine the robustness of conclusions about asymmetries resulting from the information selection design, I analyse a recent study by @AllcottGentzkow2017. The authors study drivers of people's belief in fake and true news published before the 2016 US presidential elections. They expose each subject to thirty headlines that they code as either "pro-Clinton" or "pro-Trump". Their collection of thirty headlines is built from five "categories": six false stories mentioned in mainstream media in the week before the elections ("big fake"); the six "most recent" election-related stories during the week before the election from the Guardian ("big true"); the eight top "most recent" stories classified by two the fact-checking sites Snopes and PolitiFact as unambiguously false ("small fake"); the four top "most recent" stories classified by Snopes and PolitiFact as unambiguously true ("small true"); and last, six invented fake news headlines ("placebo"). Each of these categories contains an equal number of pro-Clinton and pro-Trump headlines. Other than the online reach, the selection of news items is not theoretically or methodologically motivated by the authors. 
+
+Again, it is worth emphasizing that the paper offers a rich array of results, and asymmetries in assimilation bias are not explicitly discussed. However, conclusions can be drawn from the regression models reported. The authors regress belief in each participant-headline encounter on an interaction of being a Democrat and reading a pro-Clinton headline, and another interaction of being a Republican and reading a pro-Trump headline (Table 2 Column 1 in the original paper). The interaction for Republicans (`r round(ag2017_m1_con_original, 3)`) is smaller than for Democrats (`r round(ag2017_m1_lib_original, 3)`), but this difference is not significant according to a Wald test (`r round(ag2017_m1_diff_p, 3)`). Further, the authors create a congruence dummy variable according to whether an individual-headline pairing is congruent or not, and regress belief on an interaction between congruence and partisanship, controlling for other covariates (Table 2 Column 3 in the original paper). Again no significant interaction emerges. The results imply ideological symmetry.^[The paper also tests asymmetries in truth discernment. Find robustness tests for these results in the Appendix.]
+
+To illustrate the original results, consider Panel A of Figure \@ref(fig:ag2017-plots). It plots the average belief in pro-Clinton headlines and the average belief in pro-Trump stories, for Democrats and Republicans respectively. The fact that both groups have a higher belief in congruent than incongruent headlines shows assimilation bias. The differences each group makes between congruent and incongruent headlines is `r roundr(ag2017_bias_ttest_con_original)` for Republicans and `r roundr(ag2017_bias_ttest_lib_original)` for Democrats, but as the regression results imply, this difference is not significant.^[Similarly, if we compare individual-level assimilation bias (computed as the average belief of congruent minus average belief of incongruent headlines per individual) by group using a t-test, only a marginally significant difference emerges (p = `r roundr(ag2017_bias_ttest_p_original)`).]
+
+What would have happened had the authors chosen the sets of news items differently? Again, we can examine what would have happened had some of the items not been included. I start with excluding different categories of headlines one by one, which does not change the balance of pro-Clinton and pro-Trump headlines. It shows that in two out of five exclusion cases, significant effects *do* appear. Without the set of "small fake" headlines, the first regression discussed above yields an interaction coefficient for Republicans that is `r roundr(ag2017_exclusions[3, "m1_bias_diff"])` higher than for Democrats (Wald test: p = `r roundr(ag2017_exclusions[3, "m1_bias_diff_p"])`). Without the set of "small true" headlines, the same model reveals that Democrats are more biased (difference of coefficients = `r roundr_abs(ag2017_exclusions[4, "m1_bias_diff"])`, p = `r roundr(ag2017_exclusions[3, "m1_bias_diff_p"])`). For other excluded categories, the original results hold (cf. Appendix for all results). These different selections of headlines seem no less justified: For example, without the "small fake" items, the selection is actually more balanced between true and false headlines. 
+
+To show the problem more generally, I simulate results after randomly excluding headlines `r n` times. For each sub-sample, I exclude ten out of fifteen pro-Clinton and ten out of fifteen pro-Trump headlines, and estimate the same regressions as above. Panel B of Figure \@ref(fig:ag2017-plots) shows the distribution of effect sizes for the first regression. Dark regions indicate significance. It shows that in `r m1_bias_diff_p_sig` out of `r n` sub-samples, effects sizes are significant. An even higher number of sub-samples reveal significant effects for the second regression (cf. Appendix). Hence, in many hypothetical selection scenarios, the authors would have drawn a different conclusion about asymmetries in assimilation bias. 
+
+```{r ag2017-plots-chunk, fig.cap="Replication of Allcott and Gentzkow (2017)\\label{fig:ag2017-plots}", out.extra = '', fig.pos= "ht"}
+
+# Plotting congruence as partisanship-by-report-type group means 
+
+ag2017_data_congruence <- ag2017_data %>% 
+  mutate(Republican = ifelse(Democrat == "1", 0, 1)) %>%
+  select(ArticleProClinton, Republican, Custom1, ThoughtTrue_NS) %>%
+  convert_as_factor(ArticleProClinton, Republican) %>%
+  group_by(ArticleProClinton, Republican) %>% get_summary_stats(ThoughtTrue_NS)
+
+lab_con <- paste("diff. = ", as.character(ag2017_bias_ttest_con_original))
+lab_lib <- paste("diff. = ", as.character(ag2017_bias_ttest_lib_original))
+  
+ag2017_data_congruence_plot <- ag2017_data_congruence %>% 
+  ggplot(aes(x = Republican, y = mean, fill = ArticleProClinton)) +
+  geom_bar(stat="identity", position = position_dodge()) + 
+  geom_errorbar(aes(ymin = mean-ci, ymax = mean + ci),
+                width=.2, position = position_dodge(.9)) +
+  ggplot2::annotate(geom = "text", x=0.8, y=0.65, 
+                    label = lab_con, 
+                    size = 3, hjust=0, vjust=1) + 
+  ggplot2::annotate(geom="text", x=1.8, y=0.65, 
+                    label = lab_lib,
+                    size = 3, hjust=0, vjust=1) + 
+  labs(x = "", y = "Belief", fill = "Congruence") +
+  scale_fill_manual(values = c("grey70", "grey30"),
+                    labels = c("pro-Trump", 
+                               "pro-Clinton")) +
+  scale_x_discrete(labels = c("Democrat",
+                              "Republican")) +
+  ylim(0, 1) +
+  theme_light() + 
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank()) 
+
+# Plotting histogram of re-sampled statistics 
+
+ag2017_resampled %<>%
+  mutate(sig = ifelse(m1_bias_diff_p < 0.05, TRUE, FALSE))
+
+ag2017_resampled_plot <- ggplot(ag2017_resampled, 
+                                    aes(m1_bias_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 1/100) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", 
+                               "Yes")) +
+  xlim(-0.3, 0.3) + 
+  labs(x = "Differences (neg.: Democrats more biased)", 
+       y = "Frequency", fill = "95%-Significance") +
+  theme_light() 
+
+ggarrange(ag2017_data_congruence_plot, 
+          ag2017_resampled_plot,
+          legend = "bottom")
+
+```
+
+### Information construction design {#sec:replication3}
+
+```{r data-crawford, include = FALSE}
+
+crawford_data <- read.csv(file = "data/Political+bias+pilot_11+September+2019_10.02.csv",
+                       stringsAsFactors = FALSE, 
+                       encoding = "UTF-8")
+
+# Recode
+
+source("code/crawford-recoding.R", echo = FALSE)
+
+# Filter those who did not receive treatment
+
+crawford_data %<>% filter(!is.na(report_valence))
+
+# Split in two data sets: Original and new
+
+## Original
+crawford_data_orig <- crawford_data %>% filter(report_valence != "left strong") 
+
+## New
+crawford_data_new <- crawford_data %>% filter(report_valence != "left") 
+
+```
+
+I next turn to the robustness of the *constructed information design*. The studies using this design reviewed in @Dittoetal2018a typically construct two information items that pertain to the same factual question (e.g. whether the death penalty discourages crime), but differ in their conclusions. Thus, stimuli are identical except for their congruence with opposite positions on some ideological dimension. Subjects are randomly assigned to one or the other version, and assimilation bias is found when there is an interactive effect of ideology and this treatment on the evaluation of the information. 
+
+Take the study by @Crawfordetal2013, which asks subjects to read an article on affirmative action. One treatment reports a (real) study claiming that affirmative action policies are harmful to the success of African American students at law schools. In the other treatment, the article claims the opposite. Subjects were asked to indicate to what extent they believed the report to be true. The authors report a significant interaction between the treatment and an underlying ideological trait---in the original study, social dominance orientation (SDO). It is again worth emphasizing that the authors do not compare the magnitude of bias between subjects with high and low SDO. But one may conclude from the graph in @Crawfordetal2013 [, Figure 3] that those with high SDO are less biased than those with low SDO. Also, the meta study by @Dittoetal2018a uses the data to test this asymmetry.
+
+To show that this conclusion is not justified, I ran an extended replication. I recruited a US sample of `r nrow(crawford_data)` subjects with quotas on age, gender and state of residence through the survey company Dynata. I used a slightly shortened version of the two original articles. Crucially, I added a third treatment: In this version of the pro-affirmative-action article, the numbers made the conclusion even more compelling. For example, where the original article cited numbers suggesting that examination success rates of African-Americans were about average, the new pro-affirmative-action article cited numbers that they were even better than average and thus allowed a more extreme conclusion about the benefits of affirmative action. In sum, subjects in my replication were randomly assigned to one of three treatments: the original conservative-congruent article (anti affirmative action), the original liberal-congruent article (pro affirmative action) or a new, more extreme liberal-congruent article (pro affirmative action). The stimuli texts can be found in the Appendix. 
+
+Since I am interested in differences on the conservative-liberal dimension, I tested effects across ideology, rather than SDO. The panel A of Figure \@ref(fig:crawford-plots) illustrates the replication of the original two treatments, plotting linear fits of belief on ideology by treatment. The result is similar to the original study: Liberal subjects make a much larger difference between the two reports than conservatives^[It appears that conservatives actually believe the liberal article more, but this margin is not significant.]. However, once the liberal-congruent treatment is replaced by the more extreme version of my replication, bias appears on the conservative side as well---even if not as extreme as for liberals, as panel B of Figure \@ref(fig:crawford-plots) shows.
+
+```{r crawford-plots-chunk, fig.cap="Replication of Crawford et al. (2013) and alternative implementation\\label{fig:crawford-plots}", out.extra = '', fig.pos= "ht"}
+
+# Original left-congruent report
+
+crawford_orig_plot <- 
+  ggplot(crawford_data_orig, 
+         aes(x = libcon_num, 
+             y = report_true,
+             group = report_valence)) +
+  geom_smooth(aes(color = factor(report_valence)), 
+              method = "glm", se = FALSE, fullrange = TRUE, size = 0.5) + 
+  scale_color_manual(values = c("grey70", "grey30"),
+                     labels = c("Liberal", "Conservative")) +
+  labs(y = "Truth judgement (0 - 100%)", 
+       x = "Ideology",
+       color = "Report valence") +
+  ggtitle("(A) Original treatments") +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100),
+                     limits = c(0, 100)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7),
+                     limits = c(1, 7),
+                     labels = c("Extremely liberal", "" , "", "", "", "", 
+                                "Extremely conservative")) + 
+  theme(
+    panel.border = element_rect(colour = "#DCDCDC", fill = NA, size = 1.5),
+    panel.background = element_blank(),
+    panel.grid.major = element_line(size = .5, colour = "#EEEEEE"),
+    plot.margin = unit(c(0.8,0,0,0.3), "cm")) +
+  geom_rug(sides="b", alpha = 0.1, size = 1.2, position = "jitter")
+
+# New left-congruent report
+
+crawford_new_plot <- 
+  ggplot(crawford_data_new, 
+         aes(x = libcon_num, 
+             y = report_true,
+             group = report_valence)) +
+  geom_smooth(aes(color = factor(report_valence)), 
+              method = "glm", se = FALSE, fullrange = TRUE, size = 0.5) + 
+  scale_color_manual(values = c("grey70", "grey30"),
+                     labels = c("Liberal", "Conservative")) +
+  labs(y = "Truth judgement (0 - 100%)", 
+       x = "Ideology",
+       color = "Report valence") +
+  ggtitle("(B) New liberal treatment") +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100),
+                     limits = c(0, 100)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7),
+                     limits = c(1, 7),
+                     labels = c("Extremely liberal", "" , "", "", "", "", 
+                                "Extremely conservative")) + 
+  theme(
+    panel.border = element_rect(colour = "#DCDCDC", fill = NA, size = 1.5),
+    panel.background = element_blank(),
+    panel.grid.major = element_line(size = .5, colour = "#EEEEEE"),
+    plot.margin = unit(c(0.8,0,0,0.3), "cm")) +
+  geom_rug(sides="b", alpha = 0.1, size = 1.2, position = "jitter")
+
+
+ggarrange(crawford_orig_plot, 
+            crawford_new_plot,
+            common.legend = TRUE,
+            legend = "bottom")
+
+```
+
+To test whether the asymmetry is statistically significant in the original study, but not the modified version, I first constructed a congruence variable on a scale from -3 and 3 that was negative for conservatives treated with the liberal-congruent report and for liberals treated with the conservative-congruent report; and positive for the opposite combinations. I then regressed belief of the report on an interaction between congruence and ideology. The results are shown in Table \@ref(tab:crawford-regression). In both the original version of the experiment and the modified version, congruent information elicits higher belief than incongruent information. In the original version, the interaction between congruence and ideology is significant in the expected direction: Liberals show greater assimilation bias. However, in the modified version, this significant effect vanishes. Hence, in this scenario one might conclude that bias is bipartisan.
+
+```{r crawford-regressions, results = "asis"}
+
+# Regression with original left-congruent report
+
+crawford_orig_reg <- glm(report_true ~ report_congruence*libcon_num,
+                      family = "gaussian",
+                      data = crawford_data_orig) 
+
+# Regression with new left-congruent report
+
+crawford_new_reg <- glm(report_true ~ report_congruence*libcon_num,
+                     family = "gaussian",
+                     data = crawford_data_new)
+
+# Regression table
+
+stargazer(crawford_orig_reg, crawford_new_reg,
+          type = "latex", out = "./table-4.tex",
+          table.placement = "!ht", omit.stat = c("LL","ser","f","adj.rsq"),
+          label = "tab:crawford-regression", single.row = FALSE,
+          no.space = FALSE, digits = 2, align = TRUE,
+          column.sep.width = "5pt",
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          covariate.labels = c("Report congruence", "Ideology",
+                               "Congruence * Ideology", "Constant"),
+          dep.var.labels.include = FALSE, 
+          model.names = FALSE, model.numbers = FALSE, colnames = FALSE,
+          column.labels = c("Original treatment", "New treatment"),
+          title = "Extended replication of Crawford et al. (2013)",
+          dep.var.caption = "Outcome: Belief", header = FALSE)
+```
+
+This goes to show that the construction of treatment information can influence the magnitude of bias at different ideological positions (as in fact acknowledged in the review by @Dittoetal2018a, see Supplementary Material). The data in the pro-affirmative action article in @Crawfordetal2013 was made up, i.e. false. That made-up information in my additional treatment  therefore seems equally valid: Both constructed treatments lack a clear relation to real-world information and it is unclear which yields the "right" contrast between conservatives and liberals.
+
+# Qualitative examination of stimuli {#sec:qualitative} 
+
+Concerning the validation of @PennycookRand2019a and @AllcottGentzkow2017, what is it about certain information items that drives results? I will now identify which information items, when included or excluded, drove the variation across random sub-samples. In the following analyses, the difference between conservatives and liberals (either in truth discernment or assimilation bias) is the dependent variable. The selection of items included in the sub-sample is the independent variable, coded as a dummy for each item. Due to collinearity---whether any headline is included in the sub-sample is determined by the knowledge about inclusion of all other headlines---a conventional regression approach is problematic. Instead, I rely on a random-forest approach, built on regression trees. A regression tree recursively partitions the data to maximize the difference on the dependent variable between the ensuing data partitions, by searching all independent variables for possible cutoffs. A random forest consists of multiple such trees built on random subsets of the data. The `grf` package in `R` allows to easily determine which independent variables are most "important" for growing the forest.
+
+I first apply this technique to the 500 sub-samples built from the data by @PennycookRand2019a. Details on variable importance, and on the direction of impact, can be found in the Appendix. The headline that had the biggest impact in making Trump voters appear relatively more discerning reads *"Clinton PAC aims to boost left-wing, anti-Trump groups - will she still have clout?"*, with a teaser "Hillary Clinton is returning to politics far from the national stage she exited in November 2016 but close to the issues she left behind - backing grassroots groups intent on thwarting". This true headline was published by foxnews.com and also presented as such in the study. The headline that had the biggest in making Clinton voters appear relatively more discerning is *"Vladimir Putin 'personally involved' in US hack, report claims"* with a teaser "Russian president made key decision in operation seen as revenge for past criticism by Hillary Clinton, says NBC". This is another true report, published by the Guardian. The most influential false headline reads *"Trump to ban all TV shows that promote Gay Activity Starting with Empire as President - The #1 Empowering Conscious Website In the World"*, published by colossill.com. It made Trump voters appear relatively more truth discerning. 
+
+There are several reasons why the inclusion or exclusion of these items might have mattered. First, it could be the degree to which the headlines themselves transport uncertainty. The headline about Putin says that a "report claims". This might allow Trump supporters to more easily discount it as false even though it is true. Including this headline in the study will make them appear worse at truth discernment. Second, the source might matter: If Republicans, stereotypically speaking, believe everything by Fox News, and disbelieve everything by the Guardian (and Democrats vice versa), truth discernment asymmetries will depend on the mix of sources. However, in another study, the authors conclude that sources matter less than content for people's truth discernment capacity [@Pennycooketal2020a]. Last, we might suspect the extremity of congruence to make the difference. For example, the false headline about Trump banning TV shows, an unconstitutional act, sheds such an extremely bad light on Trump that most of his supporters will likely reject it outright. In contrast, it might be tempting for Trump opponents to entertain this idea as true. In consequence, Trump voters will appear more discerning because they rightly do not believe this headline. Although the study balanced the number of pro-Clinton and pro-Trump headlines, it did not measure how extreme they were in this respect.
+
+Next, I run a similar analysis for the 500 sub-samples built from @AllcottGentzkow2017. The question is which headlines, when included, make Republicans or Democrats appear more biased, that is, prefer congruent over incongruent items to a greater extent. The headline that contributed most to apparently greater Republican bias is *"At the 9/11 memorial ceremony, Hillary Clinton stumbled and had to be helped into a van"* (true). The headline contributing most to Democrats appearing more prone to assimilation bias reads *"The musicians Beyoncé and Jay Z appeared at a rally in support of Hillary Clinton"* (true). Below, I plot how exclusion of these two headlines, respectively, affects belief in congruent and incongruent content by partisanship. The left panel of Figure \@ref(fig:ag2017-headlines-exclusion-plot) shows what happens if the 9/11 memorial-ceremony headline is excluded from the data. The average believability of pro-Trump items goes down. This makes Republicans seem more, and Democrats less biased than in the original data. In contrast, excluding the item about Beyoncé and Jay Z makes pro-Clinton items less believable on average, as shown by the right panel of Figure \@ref(fig:ag2017-headlines-exclusion-plot). In consequence, Democrats appear less biased, Republicans more biased. 
+
+```{r ag2017-headlines-exclusion, fig.cap="Exclusion og important headlines in Allcott and Gentzkow 2017\\label{fig:ag2017-headlines-exclusion-plot}", out.extra = '', fig.pos= "ht"}
+
+# Data summaries after excluding most influential headlines
+
+ag2017_data_beyonce <- ag2017_data %>% 
+  mutate(Republican = ifelse(Democrat == "1", 0, 1)) %>%
+  filter(ArticleShort != "The musicians Beyonc") %>%
+  select(ArticleProClinton, Republican, Custom1, ThoughtTrue_NS) %>%
+  convert_as_factor(ArticleProClinton) %>%
+  group_by(ArticleProClinton, Republican) %>% get_summary_stats(ThoughtTrue_NS) %>%
+  mutate(excluded = "Beyonce")
+
+ag2017_data_memorial <- ag2017_data %>% 
+  mutate(Republican = ifelse(Democrat == "1", 0, 1)) %>%
+  filter(ArticleShort != "At the 9/11 memorial") %>%
+  select(ArticleProClinton, Republican, Custom1, ThoughtTrue_NS) %>%
+  convert_as_factor(ArticleProClinton) %>%
+  group_by(ArticleProClinton, Republican) %>% get_summary_stats(ThoughtTrue_NS) %>%
+  mutate(excluded = "Memorial")
+
+# Combine these with the complete-data summary
+
+ag2017_data_congruence %<>% 
+  mutate(excluded = "None",
+         Republican = as.numeric(as.character(Republican)))
+
+ag2017_data_beyonce_memorial <- rbind(ag2017_data_congruence, 
+                                ag2017_data_beyonce,
+                                ag2017_data_memorial) 
+
+ag2017_data_beyonce_memorial %<>% 
+  filter(!(ArticleProClinton == "0" & excluded == "Beyonce")) %>%
+  filter(!(ArticleProClinton == "1" & excluded == "Memorial")) 
+  
+# Plot data when "Beyoncé" headline is excluded
+
+ag2017_data_memorial_plot <- ag2017_data_beyonce_memorial %>% 
+  filter(excluded != "Beyonce") %>%
+  ggplot(aes(x = Republican, y = mean, 
+             interaction(as.factor(ArticleProClinton), as.factor(excluded)), 
+             linetype = as.factor(ArticleProClinton),
+             shape = as.factor(excluded))) +
+  geom_point(size = 2) +
+  geom_path() +
+  labs(x = "Partisanship", y = "Belief", 
+       shape = "Data", linetype = "Congruence") +
+  scale_shape_discrete(labels = c("'9/11 Memorial' excluded",
+                                "Complete")) +
+  scale_x_continuous(breaks = c(0, 1),
+                     labels = c("Democrat",
+                                "Republican")) +
+  ylim(0, 1) +
+  # xlim(-0.2, 1.2) +
+  theme_light() + 
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.x=element_text(size = 8),
+        legend.text = element_text(size = 8)) +
+  guides(linetype = FALSE)   
+
+# Plot data when "Memorial" headline is excluded
+
+ag2017_data_beyonce_plot <- ag2017_data_beyonce_memorial %>% 
+  filter(excluded != "Memorial") %>%
+  ggplot(aes(x = Republican, y = mean, 
+             interaction(as.factor(ArticleProClinton), as.factor(excluded)), 
+             linetype = as.factor(ArticleProClinton),
+             shape = as.factor(excluded))) +
+  geom_point(size = 2) +
+  geom_path() +
+  labs(x = "Partisanship", y = "", 
+       shape = "Data", linetype = "Congruence") +
+  scale_shape_discrete(labels = c("'Beyonce' excluded",
+                                "Complete")) +
+  scale_x_continuous(breaks = c(0, 1),
+                     labels = c("Democrat",
+                                "Republican")) +
+  ylim(0, 1) +
+  # xlim(-0.2, 1.2) +
+  theme_light() + 
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        axis.ticks.x=element_blank()) +
+  guides(linetype = FALSE)   
+
+# Get congruence legend
+
+legend_plot <- ag2017_data_beyonce_memorial %>% 
+  filter(excluded != "Memorial") %>%
+  ggplot(aes(x = Republican, y = mean, 
+             interaction(as.factor(ArticleProClinton), as.factor(excluded)), 
+             linetype = as.factor(ArticleProClinton),
+             shape = as.factor(excluded))) +
+  geom_point(size = 2) +
+  geom_path() +
+  labs(x = "Partisanship", y = "Belief", 
+       shape = "", linetype = "Congruence") +
+  scale_linetype_discrete(labels = c("pro-Trump",
+                                   "pro-Clinton")) +
+  theme_light() +
+  theme(legend.position="bottom") +
+  guides(shape = FALSE)
+
+getlegend <- function(a.gplot) {
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+  }
+
+congruence_legend <- getlegend(legend_plot)
+
+# Plots
+
+grid.arrange(arrangeGrob(ag2017_data_memorial_plot + theme(legend.position="bottom"), 
+                         ag2017_data_beyonce_plot + theme(legend.position="bottom"), nrow = 1), 
+             congruence_legend, 
+             nrow = 2, heights = c(10, 1))
+
+```
+
+This is where the two types of validation excercises in this paper connect. Note the similarity of Figure \@ref(fig:ag2017-headlines-exclusion-plot) to Figure \@ref(fig:crawford-plots), the replication of the @Crawfordetal2013 study. Somewhat counter-intuitively, information congruent for one group that is also highly believable in general makes this group appear *less* biased. In other words, the general believability of information will influence asymmetries in assimilation bias. One reason why something is generally believable is arguably that it is a fact, or connected to other facts, generally known to people. For example, if everyone is aware of the facts congruent for liberals used in a study, but less aware of the facts congruent for conservatives, people will be more likely to believe the former than the latter. In consequence, assimiliation bias will appear greater among liberals. The replication of @Crawfordetal2013 can be interpreted in a similar light: The new liberal-congruent treatment represents a more extreme factual claim. This makes it less believable on average. In consequence, bias on the liberal side shrinks, and bias on the conservative side grows. The asymmetry of the original experiment---liberals seemed more biased than conservatives---disappears.
+
+# Conclusion {#sec:conclusion} 
+
+I have attempted to show that the described research designs fail to robustly measure ideological asymmetries in truth discernment and assimilation bias. Arguably, we have to see the issue as one of external validity, that is, to ensure that "conclusions can be applied across different populations or situations" [@McDermott2011, p. 34]. The research questions studied in this review---which ideological group is better at discerning true from false information? And which group as a greater tendency to be biased towards congruent information?---can be construed in terms of different "populations" and "situations" we might study: First, there is a population of people we are interested in, i.e. all self-identified conservatives and liberals in the US. Then, there is also universe of information that these people may encounter on a daily basis. Our interest lies in understanding these encounters between an individual and an information item, which are to be explained in terms of information characteristics (i.e. truth and valence) and individual characteristics (i.e. ideology). 
+
+External validity across populations is a classic problem in social-science research. Representativeness is ideally attained by drawing a random sample from the population of interest. In practice, especially since the rise of online panels, researchers use non-probability samples and weight them on a couple of auxiliary variables such as age and gender [@Berinsky2017b]. Is there are similar way to ensure external validity across "situations", e.g. make the study representative of the possible encounters between people and information? Just as we would ideally like to sample from a population of subjects, we would like to sample from a population of information. At first, this seems difficult to achieve: The sample frame of interest is difficult to define; and even if we managed, it would be difficult to access. Weighting information items offers no easy way out insofar we do not know the auxiliary variables that tell us whether a selection is representative. 
+
+However, two practical recommendations for researchers to enhance the external validity of their stimuli can be made. First, researchers can make an effort to build sample frames that at least approximate the population of interest. The Internet has greatly advanced possibilities to build such frames. For example, Google News collects a large corpus of news articles from a wide range of sources on a daily basis. The challenge of future studies testing for asymmetries will be to define and find and use such sample frames for information stimuli. Second, researchers can run validations similar to the one I have applied to the studies by @PennycookRand2019a and @AllcottGentzkow2017. Randomly excluding stimuli subsets help understand whether findings are more than just selection artefacts. As I show in the Appendix validating Study 1 in @PennycookRand2019a, in some cases findings do turn out robust after applying this technique.
+
+A further implication of this paper is that it is difficult to measure characteristics such as truth discernment or assimilation bias across groups without reference to the real-world *supply* of information. Some have argued that in the US, at least during a certain time period, misinformation catered over-proportionally to conservatives, that is, false information on average is more congruent to conservatives [e.g. @Guessetal2019]. Imagine that in this scenario one managed to gather a representative sample of information, and asked our study participants for each item whether they believed it. Most likely, we would find that conservatives are worse at discerning the truth, as they are more tempted to believe congruent but false information. In contrast, if we balanced stimuli to have an equal amount of conservative--congruent and liberal--congruent information we would more likely find no asymmetry, or an asymmetry driven by unobserved aspects of our selection. Of course, the former outcome would be partly driven by the supply of information---but it would at be a valid representation of the real-world supply.
+
+Related to that, it seems sensible to distinguish assimilation bias in relation to true, and assimilation bias in relation to false information. For example, if liberals tend to make a greater difference between congruent and incongruent information used in a study, and this information is all true, it seems fair to speak of greater bias among liberals. However, if the selected information contains false items, and these false items are, as a function of real-world supply, on average more incongruent to liberals, then it does not seem right to attribute greater bias to liberals: After all, they rightly rejected incongruent, but false information. Examining the interplay of truth discernment and assimilation bias should therefore be a key part of the analysis.
+
+Finally, a caveat about the scope of the my main point. Although I conclude that is is desirable to make stimuli representative of some real-world population, this requirement does not invalidate research not living up to this standard. Representativeness of stimuli seems more important for studies trying to describe effect sizes across groups than for research simply testing whether an effect exists. These latter studies often require careful construction of stimulus material and effortful testing whether the right variables are manipulated, and making stimuli representative might not be possible. It is certainly difficult to draw this line. But researchers should take on the challenge to look for representative stimuli---or better justify why this is not necessary.
+
+\clearpage
+
+# References

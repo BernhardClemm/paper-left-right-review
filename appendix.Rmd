@@ -1,0 +1,1639 @@
+---
+title: |
+  |
+  | \vspace{1cm}Truth and bias: Biased findings^[Corresponding author: Bernhard Clemm von Hohenberg, bernhard.clemm@eui.eu.]\vspace{0.5cm}
+  | APPENDIX
+  |
+author: |
+  | Bernhard Clemm von Hohenberg (EUI)
+date: |
+  |       
+  |
+  | `r gsub("^0", "", format(Sys.time(), "%d %B, %Y"))`
+  |
+linestretch: 1
+colorlinks: true
+# abstract: \noindent\setstretch{1}Lorem ipsum\vspace{.8cm}
+bibliography: references.bib
+csl: american-political-science-association.csl
+output:
+  bookdown::pdf_document2:
+    includes:
+      in_header: header.tex
+    toc: no
+    keep_tex: true
+fontsize: 12pt
+link-citations: true
+documentclass: article
+geometry: margin = 1in
+always_allow_html: yes
+
+---
+
+```{r setup, include = FALSE}
+
+# Knitr options
+knitr::opts_chunk$set(cache = TRUE,
+                      echo = FALSE,
+                      concordance = TRUE,
+                      fig.pos = 'H',
+                      warning = FALSE,
+                      message = FALSE)
+# Packages
+library(tidyverse)
+library(magrittr)
+library(plm)
+library(lmtest)
+library(multiwayvcov)
+library(haven)
+library(rlist)
+library(grf)
+library(stargazer)
+library(ggpubr)
+library(modmarg)
+library(kableExtra)
+library(rstatix)
+library(survey)
+library(car)
+library(scales)
+
+# Set locale
+Sys.setlocale("LC_ALL", "en_US.UTF-8")
+ 
+```
+
+```{r functions, include = FALSE}
+
+roundr <- function(value) {
+  return(format(round(value, digits = 2), nsmall = 2))
+}
+
+roundr_abs <- function(value) {
+  return(format(round(abs(value), digits = 2), nsmall = 2))
+}
+
+```
+
+\newpage
+
+# Studies replicated in paper
+
+## Pennycook & Rand 2019 (Study 2) ####
+
+### Alternative specifications
+
+```{r pr20192-data}
+
+# Data from: https://osf.io/f5dgh/
+
+pr20192_data <- read.csv("data/Pennycook & Rand (Study 2).csv")
+
+# Create truth discernment scores
+
+fake_dem_reports <- c("Fake7_2", "Fake8_2", "Fake9_2", "Fake10_2", "Fake11_2", "Fake12_2")
+fake_rep_reports <- c("Fake1_2", "Fake2_2", "Fake3_2", "Fake4_2", "Fake5_2", "Fake6_2") 
+
+true_dem_reports <- c("Real7_2", "Real8_2", "Real9_2", "Real10_2", "Real11_2", "Real12_2")
+true_rep_reports <- c("Real1_2", "Real2_2", "Real3_2", "Real4_2", "Real5_2", "Real6_2")
+
+## Non-z-scored discernment scores: Only needed for replication of Fig 7 and left plot below
+
+pr20192_data %<>% mutate(fake_dem_average = rowMeans(select(., fake_dem_reports), na.rm = TRUE))
+pr20192_data %<>% mutate(true_dem_average = rowMeans(select(., true_dem_reports), na.rm = TRUE))
+pr20192_data %<>% mutate(fake_rep_average = rowMeans(select(., fake_rep_reports), na.rm = TRUE))
+pr20192_data %<>% mutate(true_rep_average = rowMeans(select(., true_rep_reports), na.rm = TRUE))
+
+pr20192_data %<>% mutate(dem_discernment = (true_dem_average - fake_dem_average)/4)
+pr20192_data %<>% mutate(rep_discernment = (true_rep_average - fake_rep_average)/4)
+
+pr20192_data %<>% mutate(fake_average = 
+                         rowMeans(select(., fake_rep_reports, fake_dem_reports), 
+                                  na.rm = TRUE))
+pr20192_data %<>% mutate(true_average = 
+                         rowMeans(select(., true_rep_reports, true_dem_reports), 
+                                  na.rm = TRUE))
+
+## Z-scored discernment scores
+
+pr20192_data %<>% mutate(fake_dem_average_z = scale(fake_dem_average))
+pr20192_data %<>% mutate(true_dem_average_z = scale(true_dem_average))
+pr20192_data %<>% mutate(fake_rep_average_z = scale(fake_rep_average))
+pr20192_data %<>% mutate(true_rep_average_z = scale(true_rep_average))
+                       
+pr20192_data %<>% mutate(dem_discernment_z = (true_dem_average_z - fake_dem_average_z))
+pr20192_data %<>% mutate(rep_discernment_z = (true_rep_average_z - fake_rep_average_z))
+
+pr20192_data %<>% mutate(fake_average_z = scale(fake_average))
+pr20192_data %<>% mutate(true_average_z = scale(true_average))
+
+pr20192_data %<>% mutate(discernment_z = true_average_z- fake_average_z)
+
+```
+
+```{r pr20192-functions}
+
+discernment_ttest <- function(data) {
+  
+  discernment_test <<- data %>% 
+    mutate(id = 1:nrow(.)) %>%
+    convert_as_factor(ClintonTrump) %>%
+    select(c(ClintonTrump, id, discernment_z)) %>% 
+    t.test(discernment_z ~ ClintonTrump, data = .)
+  
+  discernment_dem <<- discernment_test$estimate[["mean in group 1"]]
+  discernment_rep <<- discernment_test$estimate[["mean in group 2"]]
+  discernment_diff <<- discernment_rep - discernment_dem
+  
+  discernment_ttest_t <<- discernment_test$statistic[[1]]
+  discernment_ttest_p <<- discernment_test$p.value
+
+}
+
+discernment_valence_anova <- function(data) {
+  
+  discernment_valence_aov <<- data %>% 
+    filter(!is.na(ClintonTrump)) %>%
+    mutate(id = 1:nrow(.)) %>%
+    select(c(ClintonTrump, id, dem_discernment_z, rep_discernment_z)) %>% 
+    convert_as_factor(id, ClintonTrump) %>% 
+    pivot_longer(cols = c(dem_discernment_z, rep_discernment_z), 
+               names_to = "Valence", values_to = "Belief")%>% 
+    anova_test(Belief ~ ClintonTrump*Valence + Error(id/Valence), data = .)
+  
+  discernment_anova_F <<- discernment_valence_aov[1, "F"]
+  discernment_anova_p <<- discernment_valence_aov[1, "p"]
+  
+}
+
+```
+
+```{r pr20192-robust-fivestories}
+
+# Five instead of four stories
+
+k <- 5 
+n <- 500 
+
+pr20192_resampled_5 <- data.frame(sample = 1:n,
+                                discernment_dem = NA,
+                                discernment_rep = NA,
+                                discernment_diff = NA,
+                                discernment_ttest_p = NA)
+
+for (i in 1:n) {
+  
+  # Sample reports out of each of four categories 
+  fake_dem_reports_sample <- sample(fake_dem_reports, k, replace = FALSE)
+  true_dem_reports_sample <- sample(true_dem_reports, k, replace = FALSE)
+  fake_rep_reports_sample <- sample(fake_rep_reports, k, replace = FALSE)
+  true_rep_reports_sample <- sample(true_rep_reports, k, replace = FALSE)
+  
+  # Compute discernment scores 
+  pr20192_data_resampled_5 <- pr20192_data %>% 
+    mutate(fake_dem_average_z = 
+             scale(rowMeans(select(., fake_dem_reports_sample), na.rm = TRUE)),
+           true_dem_average_z = 
+             scale(rowMeans(select(., true_dem_reports_sample), na.rm = TRUE)),
+           fake_rep_average_z = 
+             scale(rowMeans(select(., fake_rep_reports_sample), na.rm = TRUE)),
+           true_rep_average_z = 
+             scale(rowMeans(select(., true_rep_reports_sample), na.rm = TRUE)),
+           dem_discernment_z = (true_dem_average_z - fake_dem_average_z),
+           rep_discernment_z = (true_rep_average_z - fake_rep_average_z),
+           fake_average_z =
+             scale(rowMeans(select(., fake_rep_reports_sample, 
+                                   fake_dem_reports_sample), na.rm = TRUE)),
+           true_average_z = 
+             scale(rowMeans(select(., true_rep_reports_sample,
+                                   true_dem_reports_sample), na.rm = TRUE)),
+           discernment_z = true_average_z - fake_average_z)
+
+  # t-test
+  discernment_ttest(pr20192_data_resampled_5)
+  
+  # Populate data frame of results
+  pr20192_resampled_5[i, "discernment_dem"] <- discernment_dem
+  pr20192_resampled_5[i, "discernment_rep"] <- discernment_rep
+  pr20192_resampled_5[i, "discernment_diff"] <- discernment_diff
+  pr20192_resampled_5[i, "discernment_ttest_p"] <- discernment_ttest_p
+}
+
+pr20192_resampled_5 %<>%
+  mutate(sig = ifelse(discernment_ttest_p < 0.05, TRUE, FALSE),
+         cons_better = ifelse(discernment_diff > 0, TRUE, FALSE))
+
+pr20192_resampled_5_prop_sig <- prop.table(table(pr20192_resampled_5$sig))[["TRUE"]]
+
+pr20192_resampled_5_plot <- ggplot(pr20192_resampled_5, 
+                                    aes(discernment_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 1/100) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", "Yes")) +
+  xlim(-0.45, 0.45) + 
+  ggtitle("(A) 20 out of 24 items sampled") + 
+  labs(x = "Differences (neg.: Clinton voters more discerning)", 
+       y = "Frequency", fill = "95%-Significance") +
+  theme_light() 
+
+```
+
+```{r pr20192-robust-anova}
+
+# Plot ANOVA instead of t-test significances
+
+k <- 4 
+n <- 500
+
+pr20192_resampled_anova <- data.frame(sample = 1:n, 
+                                        discernment_congruent_dem = NA,
+                                        discernment_congruent_rep = NA,
+                                        discernment_congruent_diff = NA,
+                                        discernment_anova_p = NA)
+
+set.seed(1404)
+
+for (i in 1:n) {
+  
+  # Sample reports out of each of four categories 
+  fake_dem_reports_sample <- sample(fake_dem_reports, k, replace = FALSE)
+  true_dem_reports_sample <- sample(true_dem_reports, k, replace = FALSE)
+  fake_rep_reports_sample <- sample(fake_rep_reports, k, replace = FALSE)
+  true_rep_reports_sample <- sample(true_rep_reports, k, replace = FALSE)
+  
+  # Compute discernment scores by valence for ANOVA
+    pr20192_data_resampled_anova <- pr20192_data %>% 
+    mutate(fake_dem_average_z = 
+             scale(rowMeans(select(., fake_dem_reports_sample), na.rm = TRUE)),
+           true_dem_average_z = 
+             scale(rowMeans(select(., true_dem_reports_sample), na.rm = TRUE)),
+           fake_rep_average_z = 
+             scale(rowMeans(select(., fake_rep_reports_sample), na.rm = TRUE)),
+           true_rep_average_z = 
+             scale(rowMeans(select(., true_rep_reports_sample), na.rm = TRUE)),
+           dem_discernment_z = (true_dem_average_z - fake_dem_average_z),
+           rep_discernment_z = (true_rep_average_z - fake_rep_average_z))
+  
+  # Compute difference between truth discernment for congruent stories
+  diffs <- pr20192_data_resampled_anova %>% 
+    filter(!is.na(ClintonTrump)) %>%
+    select(ClintonTrump, dem_discernment_z, rep_discernment_z) %>%
+    pivot_longer(cols = c("dem_discernment_z", "rep_discernment_z"), 
+                 names_to = "valence", values_to = "belief") %>%
+    group_by(ClintonTrump, valence) %>%
+    summarise(mean = mean(belief, na.rm = TRUE)) %>% as.data.frame()
+  discernment_congruent_dem <- diffs[diffs$ClintonTrump == 1 & 
+                                       diffs$valence == "dem_discernment_z", "mean"]
+  discernment_congruent_rep <- diffs[diffs$ClintonTrump == 2 & 
+                                       diffs$valence == "rep_discernment_z", "mean"]
+  discernment_congruent_diff <- discernment_congruent_rep - discernment_congruent_dem
+  
+  # ANOVA
+  discernment_valence_anova(pr20192_data_resampled_anova)
+  
+  # Populate data frame of results
+  pr20192_resampled_anova[i, "discernment_congruent_dem"] <- discernment_congruent_dem
+  pr20192_resampled_anova[i, "discernment_congruent_rep"] <- discernment_congruent_rep
+  pr20192_resampled_anova[i, "discernment_congruent_diff"] <- discernment_congruent_diff
+  pr20192_resampled_anova[i, "discernment_anova_p"] <- discernment_anova_p
+}
+
+pr20192_resampled_anova %<>%
+  mutate(sig = ifelse(discernment_anova_p < 0.05, TRUE, FALSE),
+         cons_better = ifelse(discernment_congruent_diff > 0, TRUE, FALSE))
+
+pr20192_resampled_anova_prop_sig <- prop.table(table(pr20192_resampled_anova$sig))[["TRUE"]]
+
+pr20192_resampled_anova_plot <- ggplot(pr20192_resampled_anova, 
+                             aes(discernment_congruent_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 1/100) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", 
+                               "Yes")) +
+  ggtitle("(B) ANOVA of two-way interaction") + 
+  xlim(-0.3, 0.3) + 
+  labs(x = "Differences (neg.: Clinton voters more discerning)", 
+       y = "", fill = "95%-Significance") +
+  theme_light() 
+
+```
+
+The following shows different specifications of the robustness check of @PennycookRand2019a, Study 2. Panel A of Figure \@ref(fig:repl1-robust) shows the distribution of results randomly sampling 20 (instead of 16) out of 24 headlines. In this setup, `r roundr(pr20192_resampled_5_prop_sig*100)` percent of sub-samples yield a statistically significant difference. As the original paper reports an asymmetry in truth discernment for congruent reports, using a two-way ANOVA, I also ran a robustness check randomly sampling 16 out of 24 headlines five hundred times with this analysis. Panel B of Figure \@ref(fig:repl1-robust) shows the distribution of differences in truth discernment for congruent headlines only and marks those statistically significant according to the two-way ANOVA. In this setup, `r roundr(pr20192_resampled_anova_prop_sig*100)` percent of sub-samples yield a statistically significant difference, some of which point to the greater truth discernment in Trump voters rather than Clinton voters. Hence, in both alternative robustness specifications, a substantial number of subsamples show no asymmetry, in contrast to the original finding.
+
+```{r pr20192-plots, fig.cap="Robustness of Pennycook and Rand (2019) - alternative specifications\\label{fig:repl1-robust}", out.extra = '', fig.pos= "ht"}
+# , fig.pos= "ht"
+
+pr20192_plots <- ggarrange(pr20192_resampled_5_plot,
+                                pr20192_resampled_anova_plot,
+                                legend = "bottom", 
+                                common.legend = TRUE)
+
+pr20192_plots
+
+```
+
+### Random forest predicting 
+
+```{r pr20192-forest, eval = FALSE}
+
+load(file = 'pr20192_resampled.Rda')
+
+# Build random forest
+
+pr20192_Y <- pr20192_resampled %>% select(discernment_diff) %>% pull()
+pr20192_X <- pr20192_resampled %>% select(c(starts_with("Fake"), starts_with("Real")))
+
+set.seed(1404)
+pr20192_forest <- regression_forest(pr20192_X, pr20192_Y)
+
+# save(pr20192_forest, file="pr20192_forest.rds")
+
+```
+
+I use a random forest approach to predict the effect of including a headline in a random sub-sample on the difference in truth discernment between Trump voters and Clinton voters. In this analysis, the discernment difference (average discernment by Trump voters minus average discernment of Clinton voters) is the dependent variable. The selection of headlines included in the sub-sample is the independent variable, coded as a dummy for each headline. Each regression tree recursively partitions the data to maximize the difference between the ensuing data partitions, by searching all variables for possible cutoffs. A random forest consists of mulitple such trees built on random subsets of the data. Table \@ref(tab:pr20192-forest-importance) shows the items most important in building trees, as determined by the `grf` package in `R`. Figure \@ref(fig:pr20192-forest-plots) plots how inclusion of each of the four most important headlines in a sub-sample affects the resulting asymmetry. Positive differences on the y-axis indicate that Trump voters are more discerning.
+
+```{r pr20192-forest-importance}
+
+pr20192_forest <- list.load(file = 'pr20192_forest.rds')
+
+# Variable importance
+
+pr20192_importance <- variable_importance(pr20192_forest, decay.exponent = 2, max.depth = 4) %>%
+  as.data.frame() %>% mutate(variable = colnames(pr20192_forest$X.orig)) %>%
+  arrange(desc(V1)) %>% 
+  rename("Importance" = V1, 
+         "Variable" = variable) %>%
+  mutate(Importance = round(Importance, 2)) %>%
+  select(Variable, Importance) %>%
+  mutate(Headline = 
+           case_when(Variable == "Fake1_2" ~ "BLM Thug Protests President Trump With Selfie...Accidentally Shoots Himself in the Face",
+                     Variable == "Fake2_2" ~ "Breaking News: Hillary Clinton Filed for Divorce in New York Courts",
+                     Variable == "Fake3_2" ~ "Clint Eastwood Refuses to Accept Presidential Medal of Freedom from Obama, Says 'He is not my President'",
+                     Variable == "Fake4_2" ~ "Breaking: Ruth Bader Ginsburg Taken to Hospital Unresponsive - Here's What We Know",
+                     Variable == "Fake5_2" ~ "Obama Was Going to Castros Funeral - Until Trump Told Him This...",
+                     Variable == "Fake6_2" ~ "Obama Crushed After Trump Orders White To Stop His Sickest Tradition",
+                     Variable == "Fake7_2" ~ "Chris Collins Says John Lewis Is Like a Spoiled Chimp That Got Too Many Bananas And Rights",
+                     Variable == "Fake8_2" ~ "SCOTUS Nominee Gorsuch Started 'Fascism Forever' Club at Elite Prep School",
+                     Variable == "Fake9_2" ~ "Sarah Palin calls to boycott Mall of America Santa Because 'Santa Was Always White in the Bible'",
+                     Variable == "Fake10_2" ~ "Mike Pence: Gay conversion therapy saved my Marriage",
+                     Variable == "Fake11_2" ~ "Pennsylvania Federal Court Grants Legal Authority to Remove Trump After Russian Meddling",
+                     Variable == "Fake12_2" ~ "Trump to Ban All TV Shows that Promote Gay Activity Starting With Empire as President",
+                     Variable == "Real1_2" ~ "Companies Are Already Cancelling Plans to Move U.S. jobs abroad",
+                     Variable == "Real2_2" ~ "Rudi Giuliani Calls Hillary Clinton Too Stupid to be President",
+                     Variable == "Real3_2" ~ "Navy Leaders Defend Trump's Lackluster Ship Budget",
+                     Variable == "Real4_2" ~ "Spike Lee: Hillary Clinton Thought She Was Entitled To the Presidency",
+                     Variable == "Real5_2" ~ "Majority of Americans Say Trump Can Keep Businesses, Poll Shows",
+                     Variable == "Real6_2" ~ "At GOP Convention Finale, Donald Trump Vows to Protect LGBTQ Community",
+                     Variable == "Real7_2" ~ "Clinton Pac Aims to Boost Left-Wing, anti-Trump groups - will she still have clout?",
+                     Variable == "Real8_2" ~ "Comey's Handling of Clinton Probe was influenced by a strange Russian document",
+                     Variable == "Real9_2" ~ "The Small Businesses near Trump Tower Are Experiencing a Miniature Recession",
+                     Variable == "Real10_2" ~ "North Carolina Republicans Push Legislation to Hobble Incomeing Democratic Governor",
+                     Variable == "Real11_2" ~ "Vladimir Putin 'personally involved' in US hack, report claims",
+                     Variable == "Real12_2" ~ "Trump Lashes out at Vanity Fair, One Day After It Lambasts His Restaurant"))
+
+kable(pr20192_importance, 
+      caption = "Headline importance Pennycook and Rand (2019) Study 2",
+      format = "latex", booktabs = T) %>%
+  kable_styling(font_size = 11, latex_options =c("scale_down"))
+```
+
+```{r pr20192-forest-plots-chunk, fig.cap="Headlines most predictive of asymmetries, Pennycook and Rand (2019) Study 2 \\label{fig:pr20192-forest-plots}", out.extra = '', fig.pos= "ht"} 
+
+load(file = 'pr20192_resampled.Rda')
+
+# Plot effects
+
+pr20192_forest_plots <- function(variable, x_lab, title) {
+  
+  plot <- pr20192_resampled %>% 
+    ggplot(aes(x = as.factor(variable), y = discernment_diff)) +
+    geom_point(alpha = 3/10) +
+    theme_light() +
+    labs(y = "Discernment difference", 
+       x = x_lab) +
+    scale_x_discrete(labels = c("No", "Yes")) +
+    ggtitle(title)
+  
+  return(plot)
+}
+
+pr20192_forest_plot1 <- pr20192_forest_plots(pr20192_resampled$Real7_2, 
+                                             "Headline in sample", 
+                                             "Effect of true headline 7")
+pr20192_forest_plot2 <- pr20192_forest_plots(pr20192_resampled$Real11_2, 
+                                             "Headline in sample", 
+                                             "Effect of true headline 11")
+pr20192_forest_plot3 <- pr20192_forest_plots(pr20192_resampled$Fake12_2, 
+                                             "Headline in sample", 
+                                             "Effect of false headline 12")
+pr20192_forest_plot4 <- pr20192_forest_plots(pr20192_resampled$Real2_2, 
+                                             "Headline in sample", 
+                                             "Effect of true headline 2")
+
+ggarrange(pr20192_forest_plot1, pr20192_forest_plot2, 
+         pr20192_forest_plot3, pr20192_forest_plot4)
+
+```
+
+\clearpage
+
+## Allcott & Gentzkow (2017) ####
+
+### Excluding sets of headlines
+
+```{r ag2017-data}
+
+ag2017_data <- read.csv(file = "data/PostElectionSurvey.csv",
+                       stringsAsFactors = FALSE, 
+                       encoding = "UTF-8")
+
+# Exclude independents like in paper
+
+ag2017_data %<>% filter(Independent == 0)
+ag2017_data %<>% mutate(ThoughtTrue_NS = ThoughtTrue_Yes) %>%
+  mutate(ThoughtTrue_NS = ifelse(ThoughtTrue == "Not sure", 0.5, ThoughtTrue_NS))
+
+# Reports
+
+ag2017_lib_reports <- 
+  names(table(ag2017_data$ArticleShort[ag2017_data$ArticleProClinton == 1]))
+ag2017_con_reports <- 
+  names(table(ag2017_data$ArticleShort[ag2017_data$ArticleProClinton == 0]))
+
+```
+
+```{r ag2017-bias-functions, include = FALSE}
+
+ag2017_m1_reg <- function(data) {
+  
+  design <- svydesign(id = ~Custom1, weights = ~SampleWeight, data = data)
+  
+  m1 <- svyglm(ThoughtTrue_NS ~ Republican:ArticleProTrump + 
+                 Democrat:ArticleProClinton + Democrat + Republican + 0, 
+               design = design)
+  
+  return(m1)
+}
+
+
+ag2017_m1 <- function(data) {
+  
+  design <- svydesign(id = ~Custom1, weights = ~SampleWeight, data = data)
+  
+  m1 <<- svyglm(ThoughtTrue_NS ~ Republican:ArticleProTrump + 
+                 Democrat:ArticleProClinton + Democrat + Republican + 0, 
+               design = design)
+  
+  m1_bias_con_coeff <<- m1$coefficients["Republican:ArticleProTrump"]
+  m1_bias_lib_coeff <<- m1$coefficients["Democrat:ArticleProClinton"]
+  m1_bias_diff <<- m1_bias_con_coeff - m1_bias_lib_coeff
+  
+  m1_bias_diff_p <<- linearHypothesis(m1, 
+  "Republican:ArticleProTrump = Democrat:ArticleProClinton")[2, 4]
+}
+
+ag2017_m3 <- function(data) {
+  
+  design <- svydesign(id = ~Custom1, weights = ~SampleWeight, data = data)
+
+  m3 <<- svyglm(ThoughtTrue_NS ~ Aligned*Republican +
+                          Aligned*lnMediaMinutesPerDay + 
+                          Aligned*SocialMediaMostImportant +  
+                          Aligned*UseSocialMedia + 
+                          Aligned*ShareFriendsPrefSame + 
+                          Aligned*Educ_Years + 
+                          Aligned*Undecided + 
+                          Aligned*Age + 
+                          Democrat + Republican +  0, 
+                          design = design)
+  
+  m3_pred <- marg(m3, var_interest = "Aligned", 
+                  at = list("Republican" = c(0, 1)),
+                  type = "effects")
+  m3_pred_congruent_lib <<- m3_pred$`Republican = 0`[2, "Margin"]
+  m3_pred_congruent_con <<- m3_pred$`Republican = 1`[2, "Margin"]
+  m3_pred_congruent_diff <<- m3_pred_congruent_con - m3_pred_congruent_lib
+
+  m3_congruent_coeff_p <<- coef(summary(m3))["Aligned:Republican", "Pr(>|t|)"]
+}
+
+
+```
+
+Testing the robustness of @AllcottGentzkow2017, I reported regression results when excluding different categories of headlines, one by one. Table \@ref(tab:ag2017-robust1-table1) shows these regressions. Models correspond to Column 1 of Table 2 in the original paper by @AllcottGentzkow2017. Note that each exclusion does not change the balance of pro-Clinton and pro-Trump headlines. Table \@ref(tab:ag2017-robust1-table2) shows results of testing the difference between the two coefficients of interest for each exclusion with a Wald test. It shows that in two cases, the difference becomes significant.
+
+```{r ag2017-robust1, paged.print=FALSE, results="asis"}
+
+# Re-sampling by excluding one of five categories
+
+ag2017_exclusions <- data.frame(param = c("Coefficients difference",
+                                          "Chi2 (Test of difference)", "p-value"),
+                                big_fake = NA,
+                                big_true = NA,
+                                small_fake = NA, 
+                                small_true = NA,
+                                placebo = NA)
+
+## Exclude big fake
+
+ag2017_data_excluded <- ag2017_data %>% filter(ArticleType != "BigFake")
+
+bigfake_m1 <- ag2017_m1_reg(ag2017_data_excluded)
+bigfake_lh <- linearHypothesis(bigfake_m1, "Republican:ArticleProTrump = Democrat:ArticleProClinton")
+ag2017_exclusions[1, "big_fake"] <- bigfake_m1$coefficients["Republican:ArticleProTrump"] -
+  bigfake_m1$coefficients["Democrat:ArticleProClinton"]
+ag2017_exclusions[2, "big_fake"] <- bigfake_lh[2, 3]
+ag2017_exclusions[3, "big_fake"] <- bigfake_lh[2, 4]
+
+## Exclude big true
+
+ag2017_data_excluded <- ag2017_data %>% filter(ArticleType != "BigTrue")
+
+bigtrue_m1 <- ag2017_m1_reg(ag2017_data_excluded)
+bigtrue_lh <- linearHypothesis(bigtrue_m1, "Republican:ArticleProTrump = Democrat:ArticleProClinton")
+ag2017_exclusions[1, "big_true"] <- bigtrue_m1$coefficients["Republican:ArticleProTrump"] - 
+  bigtrue_m1$coefficients["Democrat:ArticleProClinton"]
+ag2017_exclusions[2, "big_true"] <- bigtrue_lh[2, 3]
+ag2017_exclusions[3, "big_true"] <- bigtrue_lh[2, 4]
+
+## Exclude small fake
+
+ag2017_data_excluded <- ag2017_data %>% filter(X_A_CheckedFalse == 0)
+
+smallfake_m1 <- ag2017_m1_reg(ag2017_data_excluded)
+smallfake_lh <- linearHypothesis(smallfake_m1, "Republican:ArticleProTrump = Democrat:ArticleProClinton")
+ag2017_exclusions[1, "small_fake"] <- smallfake_m1$coefficients["Republican:ArticleProTrump"]- 
+  smallfake_m1$coefficients["Democrat:ArticleProClinton"]
+ag2017_exclusions[2, "small_fake"] <- smallfake_lh[2, 3]
+ag2017_exclusions[3, "small_fake"] <- smallfake_lh[2, 4]
+
+## Exclude small true
+
+ag2017_data_excluded <- ag2017_data %>% filter(X_A_CheckedTrue == 0)
+
+smalltrue_m1 <- ag2017_m1_reg(ag2017_data_excluded)
+smalltrue_lh <- linearHypothesis(smalltrue_m1, "Republican:ArticleProTrump = Democrat:ArticleProClinton")
+ag2017_exclusions[1, "small_true"] <- smalltrue_m1$coefficients["Republican:ArticleProTrump"] - 
+  smalltrue_m1$coefficients["Democrat:ArticleProClinton"]
+ag2017_exclusions[2, "small_true"] <- smalltrue_lh[2, 3]
+ag2017_exclusions[3, "small_true"] <- smalltrue_lh[2, 4]
+
+## Exclude placebo
+
+ag2017_data_excluded <- ag2017_data %>% filter(ArticleType != "FakeFake")
+
+placebo_m1 <- ag2017_m1_reg(ag2017_data_excluded)
+placebo_lh <- linearHypothesis(placebo_m1, "Republican:ArticleProTrump = Democrat:ArticleProClinton")
+ag2017_exclusions[1, "placebo"] <- placebo_m1$coefficients["Republican:ArticleProTrump"] - 
+  placebo_m1$coefficients["Democrat:ArticleProClinton"]
+ag2017_exclusions[2, "placebo"] <- placebo_lh[2, 3]
+ag2017_exclusions[3, "placebo"] <- placebo_lh[2, 4]
+
+```
+
+```{r ag2017-robust1-table1, paged.print=FALSE, results="asis"}
+
+stargazer(bigfake_m1, bigtrue_m1, smallfake_m1, smalltrue_m1, placebo_m1, 
+          type = "latex",
+          out="./table-4.tex",
+          omit.stat=c("LL","ser","f","adj.rsq"), 
+          ci=FALSE, digits=2, 
+          ci.level=0.95,
+          single.row=FALSE, 
+          label = "tab:ag2017-robust1-table1", 
+          table.placement="!ht", 
+          # column.sep.width = "1pt",
+          title = "Excluding categories in Allcott and Gentzkow (2017)",
+          align = TRUE,
+          dep.var.caption = "Excluded category",
+          dep.var.labels.include = FALSE, 
+          column.labels = c("Big Fake", "Big True",
+                             "Small Fake", "Small True", "Fake fake"),
+          covariate.labels = c("Democrat", "Republican", 
+                               "Rep * Pro-Trump item", "Dem * Pro-Clinton item"),
+          model.names = FALSE,
+          model.numbers = FALSE,
+          star.cutoffs = c(0.05, 0.01, 0.001), star.char = c("*", "**", "***"), 
+          notes.append = FALSE, 
+          notes = c("*p<0.05; **p<0.01; ***p<0.001"),
+          header=FALSE,
+          font.size = "small")
+
+```
+
+```{r ag2017-robust1-table2}
+
+ag2017_exclusions %<>%
+  mutate_if(is.numeric, ~round(., 3)) %>%
+  rename("Big fake" = big_fake, 
+         "Big true" = big_true,
+         "Small fake" = small_fake,
+         "Small true" = small_true,
+         "Placebo" = placebo)
+
+kable(ag2017_exclusions, 
+      caption = "Wald tests of equal coefficients",
+      format = "latex", booktabs = T) %>%
+  kable_styling(font_size = 11, full_width = T) %>%
+  column_spec(1, width = "4cm") %>%
+  add_header_above(c(" " = 1, "Excluded category" = 5))
+
+```
+
+### Alternative specifications
+
+In the main paper, I present results referring to the regression in Columns 1 of Table 2 in the original paper by @AllcottGentzkow2017. Below, I show robustness tests with slightly different specifications. Panel A of Figure \@ref(fig:ag2017-robust3-4-plots) shows the same results from another robustness test  drawing 500 random sub-samples, this time sampling 24 (instead of 20) out of 30 headlines. Again, a substantial number of sub-samples reveals significant asymmetries, most of them in favour of Democrats, some of them in favour of Republicans. Panel B shows results for the 500 random sub-samples of 20 headlines, this time running the regression from Column 3 in Table 2 in the original paper by @AllcottGentzkow2017, which controls for a number of covariates such as daily media time. The horizontal axis represents the size of the coefficient of an interaction of partisanship and congruence of the headline. Sub-samples with significant coefficients are shaded.
+
+```{r ag2017-robust3}
+
+# Robust 3: Sampling 12 instead of 10
+
+k <- 12 # Number of stories sampled
+n <- 500 # Number of new samples
+
+ag2017_robust_3 <- data.frame(sample = 1:n,
+                               m3_pred_congruent_lib = NA,
+                               m3_pred_congruent_con = NA,
+                               m3_pred_congruent_diff = NA,
+                               m3_congruent_coeff_p = NA)
+
+set.seed(42)
+for (i in 1:n) {
+  
+  lib_reports_sample <- sample(ag2017_lib_reports, k)
+  con_reports_sample <- sample(ag2017_con_reports, k)
+  reports_sample <- c(lib_reports_sample, con_reports_sample)
+  
+  ag2017_data_resampled <- ag2017_data %>% filter(ArticleShort %in% reports_sample)
+
+  # Regressions
+  
+  ag2017_m1(ag2017_data_resampled)
+  
+  # Populate data frame
+  
+  ag2017_robust_3[i, "m1_bias_diff"] <- m1_bias_diff
+  ag2017_robust_3[i, "m1_bias_diff_p"] <- m1_bias_diff_p
+
+}
+
+ag2017_robust_3 %<>%
+  mutate(sig = ifelse(m1_bias_diff_p < 0.05, TRUE, FALSE))
+
+ag2017_robust_3_plot <- ggplot(ag2017_robust_3, 
+                                    aes(m1_bias_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 1/100) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", 
+                               "Yes")) +
+  xlim(-0.3, 0.3) + 
+  labs(x = "Differences (neg.: Democrats more biased)", 
+       y = "Frequency", fill = "95%-Significance") +
+  ggtitle("(A) Sampling 24 out of 30 items") +
+  theme_light() 
+
+```
+
+```{r ag2017-robust4}
+
+k <- 10 # Number of stories sampled
+n <- 500 # Number of new samples
+
+ag2017_robust_4 <- data.frame(sample = 1:n,
+                              m1_bias_diff = NA,
+                              m1_bias_diff_p = NA)
+
+set.seed(42)
+for (i in 1:n) {
+  
+  lib_reports_sample <- sample(ag2017_lib_reports, k)
+  con_reports_sample <- sample(ag2017_con_reports, k)
+  reports_sample <- c(lib_reports_sample, con_reports_sample)
+  
+  ag2017_data_resampled <- ag2017_data %>% filter(ArticleShort %in% reports_sample)
+
+  # Regressions
+  
+  ag2017_m3(ag2017_data_resampled)
+  
+  # Populate data frame
+  
+  ag2017_robust_4[i, "m3_pred_congruent_lib"] <- m3_pred_congruent_lib
+  ag2017_robust_4[i, "m3_pred_congruent_con"] <- m3_pred_congruent_con
+  ag2017_robust_4[i, "m3_congruent_coeff_p"] <- m3_congruent_coeff_p
+  ag2017_robust_4[i, "m3_pred_congruent_diff"] <- m3_pred_congruent_diff
+  
+}
+
+ag2017_robust_4 %<>%
+  mutate(sig = ifelse(m3_congruent_coeff_p < 0.05, TRUE, FALSE))
+
+ag2017_robust_4_plot <- ggplot(ag2017_robust_4, 
+                                    aes(m3_pred_congruent_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 1/100) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", 
+                               "Yes")) +
+  xlim(-0.3, 0.3) + 
+  labs(x = "Differences (neg.: Democrats more biased)", 
+       y = "Frequency", fill = "95%-Significance") +
+  ggtitle("Testing model of Column 3 of original paper") +
+  theme_light() 
+
+
+```
+
+```{r ag2017-robust3-4, fig.cap="Robustness of Allcott and Gentzkow (2017) - alternative specifications\\label{fig:ag2017-robust3-4-plots}", out.extra = '', fig.pos= "ht"}
+
+ggarrange(ag2017_robust_3_plot, 
+          ag2017_robust_4_plot,
+          legend = "bottom")
+
+```
+
+### Random forest to determine predictive headlines
+
+As in the previous section, I use a random forest to predict the effect of including a headline in a random sub-sample on the asymmetry between Republicans and Democrats. The difference in bias, as determined by the regression model used in the paper, is the dependent variable. The selection of headlines included in the sub-sample is the independent variable, coded as a dummy for each headline. Table \@ref(tab:ag2017-forest-importance) shows the items most important in building trees, as determined by the `grf` package in `R`. Figure \@ref(fig:ag2017-forest-plots) plots how inclusion of each of the four most important headlines in a sub-sample affects the resulting asymmetry.
+
+```{r ag2017-forest, eval = FALSE}
+
+load(file = 'ag2017_resampled.Rda')
+
+# Build random forest
+
+ag2017_Y <- ag2017_resampled %>% select(m1_bias_diff) %>% pull()
+ag2017_X <- ag2017_resampled[, 13:42]
+ag2017_forest <- regression_forest(ag2017_X, ag2017_Y)
+
+# list.save(ag2017_forest, 'ag2017_forest.rds')
+
+```
+
+```{r ag2017-forest-importance}
+
+ag2017_forest <- list.load(file = 'ag2017_forest.rds')
+
+# Variable importance
+
+ag2017_importance <- variable_importance(ag2017_forest, 
+                                         decay.exponent = 2, 
+                                         max.depth = 4) %>%
+  as.data.frame() %>% mutate(variable = colnames(ag2017_forest$X.orig)) %>%
+  arrange(desc(V1)) %>% 
+  rename("Importance" = V1, 
+         "Variable" = variable) %>%
+  mutate(Importance = round(Importance, 2)) %>%
+  mutate(Truth = 
+           case_when(Variable == "The musicians Beyonc" ~ "True",
+                     Variable == "At the third preside" ~ "True",
+                     Variable == "At the 9/11 memorial" ~ "True",
+                     Variable == "Two days before the " ~ "True",
+                     Variable == "On October 28th, the" ~ "True",
+                     Variable == "Repeated requests fo" ~ "True",
+                     Variable == "Hillary Clinton said" ~ "True",
+                     Variable == "An email written by " ~ "False",
+                     Variable == "At the beginning of " ~ "False",
+                     Variable == "Celebrity RuPaul sai" ~ "False",
+                     Variable == "Leaked documents rev - Trump" ~ "False",
+                     Variable == "Donald Trump and his" ~ "True",
+                     Variable == "Leaked documents rev - Clinton" ~ "False",
+                     Variable == "FBI Director James C - Trump" ~ "False",
+                     Variable == "Pope Francis endorse" ~ "False",
+                     Variable == "At a rally a few day" ~ "False",
+                     Variable == "Mike Pence said that" ~ "False",
+                     Variable == "An FBI agent connect" ~ "False",
+                     Variable == "A Republican congres" ~ "False",
+                     Variable == "The Clinton Foundati" ~ "False",
+                     Variable == "Hillary Clinton's fi" ~ "True",
+                     Variable == "In May 2016, Ireland" ~ "False",
+                     Variable == "Trump Foundation sta - Trump" ~ "False",
+                     Variable == "FBI Director James C - Clinton" ~ "False",
+                     Variable == "Under Donald Trump's" ~ "True",
+                     Variable == "FBI Director James C" ~ "False",
+                     Variable == "Donald Trump threate" ~ "False",
+                     Variable == "The Clinton campaign" ~ "False",
+                     Variable == "Wikileaks was caught" ~ "False",
+                     Variable == "Clinton Foundation s - Clinton" ~ "False")) %>%
+  mutate(Headline = case_when(Variable == "The musicians Beyonc" ~ "The musicians Beyonce and Jay Z appeared at a rally in support of Hillary Clinton.",
+                     Variable == "At the third preside" ~ "At the third presidential debate, Donald Trump refused to say whether he would concede the election if he lost.",
+                     Variable == "At the 9/11 memorial" ~ "At the 9/11 memorial ceremony, Hillary Clinton stumbled and had to be helped into a van.",
+                     Variable == "Two days before the " ~ "Two days before the election, the FBI director told Congress that a newer batch of emails linked to Hillary Clinton’s \nprivate email server did not change his conclusion that Clinton should face no charges over her handling of classified information.",
+                     Variable == "On October 28th, the" ~ "On October 28th, the FBI director alerted members of Congress that it had discovered new emails relevant to its \ninvestigation of Hillary Clinton’s personal server.",
+                     Variable == "Repeated requests fo" ~ "Repeated requests for additional security in Benghazi were routinely denied by Hillary Clinton’s State Department.",
+                     Variable == "Hillary Clinton said" ~ "Hillary Clinton said that 'you could put half of Trump’s supporters into what I call the basket of deplorables.'",
+                     Variable == "An email written by " ~ "An email written by Hillary Clinton aide Huma Abedin to her brother revealed that she is a radical Muslim.",
+                     Variable == "At the beginning of " ~ "At the beginning of November, the FBI uncovered evidence of a pedophile sex ring run under the guise of the Clinton Foundation.",
+                     Variable == "Celebrity RuPaul sai" ~ "Celebrity RuPaul said that Donald Trump mistook him for a woman and groped him at a party in 1995.",
+                     Variable == "Leaked documents rev - Trump" ~ "Leaked documents reveal that the Trump campaign planned a scheme to offer to drive Democratic voters to the polls \nbut then take them to the wrong place.",
+                     Variable == "Donald Trump and his" ~ "Donald Trump and his campaign donated food and supplies to Hurricane Matthew victims in North Carolina.",
+                     Variable == "Leaked documents rev - Clinton" ~ "Leaked documents reveal that the Clinton campaign planned a scheme to offer to drive Republican voters to the polls \nbut then take them to the wrong place.",
+                     Variable == "FBI Director James C - Trump" ~ "FBI Director James Comey was secretly communicating with Donald Trump about when to release results of the FBI \ninvestigation into Clinton’s private email server.",
+                     Variable == "Pope Francis endorse" ~ "Pope Francis endorsed Donald Trump.",
+                     Variable == "At a rally a few day" ~ "At a rally a few days before the election, President Obama screamed at a protester who supported Donald Trump.",
+                     Variable == "Mike Pence said that" ~ "Mike Pence said that ”Michelle Obama is the most vulgar First Lady we’ve ever had.”",
+                     Variable == "An FBI agent connect" ~ "An FBI agent connected to Hillary Clinton’s email disclosures murdered his wife and shot himself.",
+                     Variable == "A Republican congres" ~ "A Republican congressman helped broker a deal for Donald Trump to buy a taxpayer-owned building in order to build \nthe Trump International Hotel in Washington, D.C.",
+                     Variable == "The Clinton Foundati" ~ "Clinton Foundation staff were found guilty of diverting funds to buy alcohol for expensive parties in the Caribbean.",
+                     Variable == "Hillary Clinton's fi" ~ "Hillary Clinton’s first name was spelled with an extra ”i” (”Hilliary,” with the word ”liar” in the middle) on election \nballots printed for use in Lonoke County, Arkansas.",
+                     Variable == "In May 2016, Ireland" ~ "In May 2016, Ireland announced that it was officially accepting Americans requesting political asylum from a Donald \nTrump presidency.",
+                     Variable == "Trump Foundation sta - Trump" ~ "Trump Foundation staff were found guilty of diverting funds to buy alcohol for expensive parties in the Caribbean.",
+                     Variable == "FBI Director James C - Clinton" ~ "FBI Director James Comey was secretly communicating with Hillary Clinton about when to release results of the FBI \ninvestigation into Clinton’s private email server.",
+                     Variable == "Under Donald Trump's" ~ "Under Donald Trump’s tax plan, it is projected that 51% of single parents would see their taxes go up.",
+                     Variable == "FBI Director James C" ~ "FBI Director James Comey’s October 28th letter about new developments in the investigation of Hillary Clinton’s emails \nwent only to Republican members of Congress, and not to Democrats.",
+                     Variable == "Donald Trump threate" ~ "Donald Trump threatened to deport Puerto Rican Broadway star Lin-Manuel Miranda, not realizing that Puerto Rico \nis a U.S. territory and Puerto Ricans are U.S. citizens.",
+                     Variable == "The Clinton campaign" ~ "The Clinton campaign secretly paid musicians Beyonce and Jay Z $62 million to appear at a rally in support of Hillary Clinton.",
+                     Variable == "Wikileaks was caught" ~ "Wikileaks was caught by Newsweek fabricating emails with the intent of damaging Hillary Clinton’s campaign.",
+                     Variable == "Clinton Foundation s - Clinton" ~ "Clinton Foundation staff were found guilty of diverting funds to buy alcohol for expensive parties in the Caribbean.")) %>%
+  select(Variable, Importance, Headline, Truth)
+
+ag2017_importance %>% 
+  # mutate_all(linebreak) %>%
+  kable(caption = "Headline importance Allcott and Gentzkow (2017)",
+        format = "latex", booktabs = T) %>% 
+  column_spec(3, width = "13cm") %>%
+  column_spec(1:2, width = "2cm") %>%
+  kable_styling(font_size = 8, latex_options = c("scale_down"))
+
+```
+
+```{r ag2017-forest-plots-chunk, fig.cap="Headlines most predictive of sub-sample differences, Allcott and Gentzkow (2017)\\label{fig:ag2017-forest-plots}", out.extra = '', fig.pos= "ht"}
+
+load(file = 'ag2017_resampled.Rda')
+
+ag2017_forest_plots <- function(variable, x_lab, y_lab, title) {
+  
+  plot <- ag2017_resampled %>% 
+    ggplot(aes(x = as.factor(variable), y = m1_bias_diff)) +
+    geom_point(alpha = 3/10) +
+    theme_light() +
+    labs(y = y_lab, 
+       x = x_lab) +
+    scale_x_discrete(labels = c("No", "Yes")) +
+    ggtitle(title) +
+    theme(plot.title = element_text(size = 8))
+  
+  return(plot)
+}
+
+ag2017_forest_plot1 <- ag2017_forest_plots(ag2017_resampled$`The musicians Beyonc`, 
+                                             "Headline in sample", "Bias difference",
+                                             "'The musicians Beyonce and Jay Z...'")
+ag2017_forest_plot2 <- ag2017_forest_plots(ag2017_resampled$`At the third preside`, 
+                                             "Headline in sample", "",
+                                             "At the third presidential debate, Donald...'")
+ag2017_forest_plot3 <- ag2017_forest_plots(ag2017_resampled$`At the 9/11 memorial`, 
+                                             "Headline in sample", "", 
+                                             "At the 9/11 memorial ceremony, Hillary...'")
+ag2017_forest_plot4 <- ag2017_forest_plots(ag2017_resampled$`Two days before the`, 
+                                             "Headline in sample", "Bias difference",
+                                             "Two days before the election, the FBI...'")
+# ag2017_forest_plot5 <- ag2017_forest_plots(ag2017_resampled$`On October 28th, the`, 
+#                                              "Headline in sample", "",
+#                                              "On October 28th, the FBI director...'")
+# ag2017_forest_plot6 <- ag2017_forest_plots(ag2017_resampled$`Repeated requests fo`, 
+#                                              "Headline in sample", "",
+#                                              "Repeated requests for additional security...'")
+
+ggarrange(ag2017_forest_plot1, ag2017_forest_plot2, 
+         ag2017_forest_plot3, ag2017_forest_plot4)
+
+```
+
+\clearpage
+
+## Crawford et al. 2013 ####
+
+```{r crawford-data}
+
+crawford_data <- read.csv(file = "data/Political+bias+pilot_11+September+2019_10.02.csv",
+                       stringsAsFactors = FALSE, 
+                       encoding = "UTF-8")
+
+source("code/crawford-recoding.R", echo = FALSE)
+
+crawford_data %<>% filter(!is.na(report_valence))
+crawford_data %<>% filter(Q_TotalDuration < 1800)
+
+```
+
+### Measurement ####
+
+The experiment replicating @Crawfordetal2013 was part of a larger pilot study. The full questionnaire can be accessed at https://eui.eu.qualtrics.com/jfe/form/SV_6lr0RUJ9RQXyFq5. Below, only the variables used in this paper and the appendix listed. 
+
+| Variable | Question | Choices/Coding  |
+|----------|------------------------|-------------|
+| Age | "How old are you?" | Years |
+| Gender | "Which gender do you have?" | "Female", "Male", "Other/Don't Know" |
+| State of residence | "In what U.S. state are you registered to vote now?"  | Choice among 16 federal states |
+| Education | "What is the highest level of school you have completed or the highest degree you have received?" | 17 choices from "Less than 1st grade" to "Doctorate Degree (for example, PhD, EdD)" |
+| Ideology | "We hear a lot of talk these days about liberals and conservatives. Here is a seven-point scale on which the political views that people might hold are arranged from extremely liberal to extremely conservative. Where would you place yourself on this scale?" | "Extremely liberal", "Liberal", "Slightly liberal", "Moderate; middle of the road", "Slightly conservative", "Conservative", "Extremely conservative" |
+| Partisanship | What political party are you registered with, if any? | "Democratic Party", "Republican Party", "None or 'independent'" |
+
+### Treatment description ####
+
+The three treatment texts are shown below. Differences are enclosed in brackets, with the original conservative-congruent version first, the original liberal-congruent second, and the new liberal-congruent version last. Texts were slightly shortened compared to the original study. 
+
+"A recent study published in The Stanford Law Review by Richard H. Sander, a law professor at the University of California, Los Angeles, has come to the conclusion that affirmative action programs [actually reduce the number of black lawyers, because many black students end up attending law schools that are too difficult for them, and perform badly. If black law students were accepted to less difficult law schools under race-blind admissions, Professor Sander writes, they would receive better grades and pass the bar in greater numbers / have led to an increase in the number of black lawyers. Black law students under affirmative action programs are succeeding even at the most difficult law schools, Professor Sander writes / have led to an increase in the number of black lawyers. Black law students under affirmative action programs are succeeding even at the most difficult law schools, Professor Sander writes].
+
+Professor Sander first looked at academic credentials before entering law school. The data show that on a standard 100-point scale to reflect both Law School Admission Test (LSAT) scores and undergraduate grade point averages, the average black student’s score was 15 points below that of the average white student.
+
+[Once at law school, the average black student gets lower grades than white students: 52% of black students are in the bottom 10th of their first-year law school classes, while only 8% are in the top half. And the grades of black students drop slightly from the first year of law school to the third. / By the time they finish law school, however, the average black student gets similar grades as white students. Of law students in the top half, there is an equal proportion of black and white students. The grades of black students also increase slightly from the first year of law school to the third. / By the time they finish law school, however, the average black student gets better grades as white students. Of law students in the top half, there is a higher proportion of black and white students. The grades of black students also increase substantially from the first year of law school to the third.]
+
+Black students are also [twice as likely as whites to fail to finish law school. / as likely as white students to finish law school / more likely as white students to finish law school.] About [88% / 88% / 78%] of all law students pass a bar exam on the first attempt; [95% / 95% / 84% pass eventually. For blacks, the corresponding figures are [61% and 78% / 86% and 94% / 86% and 94%]."
+
+### Treatment balance ####
+
+Table \@ref(tab:crawford-balance) reports balance across the three treatments. It shows that there were not differences larger than what we would expect by chance according to conventional levels of significance.
+
+```{r crawford-balance}
+
+# Recode into dummies
+
+crawford_data %<>% 
+  mutate(age = as.numeric(age),
+         female = ifelse(sex == "Female", 1, 0),
+         state_south = ifelse(state_group == "S", 1, 0),
+         democrat = ifelse(party_rec == "Democratic", 1, 0),
+         education_group = ifelse(education_group == "", NA, education_group),
+         high_school = ifelse(education_group %in% c("High School"), 1, 0))
+
+balance <- crawford_data %>% select(age, female, state_south, high_school, 
+                                 democrat, libcon_num, report_valence) %>%
+  pivot_longer(cols = c(age, female, state_south, high_school, 
+                        democrat, libcon_num), 
+               values_to = "value", names_to = "Covariate") %>% 
+  group_by(Covariate, report_valence) %>%
+  get_summary_stats(type = "mean") %>%
+  mutate(mean = round(mean, 2)) %>%
+  select(-c(variable, n)) %>%
+  pivot_wider(names_from = "report_valence", values_from = "mean")
+
+balance$p_value <- NA
+balance[1, "p_value"] <- round(anova_test(crawford_data, age ~ report_valence)$p, 2)
+balance[2, "p_value"] <- round(chisq.test(table(crawford_data$party_rec,
+                                            crawford_data$report_valence))$p.value, 2)
+balance[3, "p_value"] <- round(chisq.test(table(crawford_data$female, 
+                                      crawford_data$report_valence))$p.value, 2)
+balance[4, "p_value"] <- round(chisq.test(table(crawford_data$education_group, 
+                                      crawford_data$report_valence))$p.value, 2)
+balance[5, "p_value"] <- anova_test(crawford_data, libcon_num ~ report_valence)$p
+balance[6, "p_value"] <- round(chisq.test(table(crawford_data$state_group, 
+                                      crawford_data$report_valence))$p.value, 2)
+
+balance %<>%
+  rename("Original liberal-congruent" = left,
+         "Extreme liberal-congruent" = `left strong`,
+         "Original conservative-congruent" = right)
+colnames(balance)[5] <- paste0("Significance of differences", footnote_marker_alphabet(1))
+balance[1, "Covariate"] <- "Age (mean)"
+balance[2, "Covariate"] <- "Partisanship (prop. Democrat)"
+balance[3, "Covariate"] <- "Sex (prop. female)"
+balance[4, "Covariate"] <- "Edudation (prop. high school)"
+balance[5, "Covariate"] <- "Ideology (mean)"
+balance[6, "Covariate"] <- "State (prop. south)"
+
+# balance_content[13, 1] <- paste0(balance_content[13, 1], "\\textsuperscript{b}")
+
+kable(balance, 
+      caption = "Balance statistics for treatment", 
+      format = "latex", booktabs = T, linesep = "", longtable = T, escape = F) %>%
+  kable_styling(full_width = T,
+                latex_options = c("scale_down", "HOLD_position"),
+                font_size = 10) %>%
+  column_spec(1, width = "5cm") %>%
+  add_header_above(c(" " = 1, "Treatment group" = 3)) %>%
+#   column_spec(4, width = "2cm") %>%
+  footnote(alphabet = c("p-value of anova for means; p-value of chi2-test for categorical variables; only one category of education, partisanship and state of residence displayed. Significance test refers to all categories."), threeparttable = T)
+
+```
+
+\newpage
+
+# Further robustness checks
+
+## Allcott & Gentzkow 2017: Truth discernment
+
+```{r ag2017-data-discern}
+
+ag2017_data <- read.csv(file = "data/PostElectionSurvey.csv",
+                       stringsAsFactors = FALSE, 
+                       encoding = "UTF-8")
+
+true_reports <- 
+  names(table(ag2017_data$ArticleShort[ag2017_data$ArticleTrue == 1]))
+false_reports <- 
+  names(table(ag2017_data$ArticleShort[ag2017_data$ArticleTrue == 0]))
+
+```
+
+```{r ag2017-discern-functions}
+
+ag2017_discernment <- function(data) {
+  
+  design <- svydesign(id = ~Custom1, weights = ~SampleWeight, data = data)
+  reg <- svyglm(Correct_NS ~ Republican + Democrat, design = design)
+  coeff_rep <<- reg$coefficients["Republican"]
+  coeff_dem <<- reg$coefficients["Democrat"]
+  coeff_diff <<- coeff_rep - coeff_dem
+  wald <- linearHypothesis(reg, c("Republican = Democrat"))
+  coeff_diff_p <<- wald[2, 4]
+  
+}
+
+```
+
+```{r ag2017-discern-false}
+
+ag2017_data_false <- ag2017_data %>% filter(ArticleShort %in% false_reports)
+
+# Original results
+
+ag2017_discernment(ag2017_data_false)
+ag2017_false_wald_p <- coeff_diff_p
+
+# Re-sampling
+
+n <- 500
+
+ag2017_discern_false_resampled <- data.frame(sample = 1:n,
+                                       coeff_diff = NA, 
+                                       coeff_diff_p = NA)
+
+set.seed(1404)
+for (i in 1:n) {
+  
+  false_reports_sample <- sample(false_reports, 15)
+  ag2017_data_resampled <- ag2017_data %>% filter(ArticleShort %in% false_reports_sample)
+
+  # Regressions
+  ag2017_discernment(ag2017_data_resampled)
+  
+  # Populate data frame
+  ag2017_discern_false_resampled[i, "coeff_diff"] <- coeff_diff
+  ag2017_discern_false_resampled[i, "coeff_diff_p"] <- coeff_diff_p
+}
+
+ag2017_discern_false_resampled %<>% 
+  mutate(sig = ifelse(coeff_diff_p < 0.05, TRUE, FALSE))
+
+ag2017_discern_false_sig_prop <- prop.table(table(ag2017_discern_false_resampled$sig))[["TRUE"]]
+         
+ag2017_discern_false_plot <- ggplot(ag2017_discern_false_resampled, 
+                                    aes(coeff_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 0.005) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", "Yes")) +
+  xlim(-0.15, 0.15) + 
+  ggtitle("(B) False headlines") +
+  labs(x = "Differences (neg.: Democrats more correct)", 
+       y = "Frequency", fill = "95%-Significance") +
+  theme_light() 
+
+
+```
+
+```{r ag2017-discern-true}
+
+ag2017_data_true <- ag2017_data %>% filter(ArticleShort %in% true_reports)
+
+# Original results
+
+ag2017_discernment(ag2017_data_true)
+ag2017_true_wald_p <- coeff_diff_p
+
+## Re-sampling
+
+n <- 500 
+
+ag2017_discern_true_resampled <- data.frame(sample = 1:n,
+                                       coeff_diff = NA, 
+                                       coeff_diff_p = NA)
+
+set.seed(1404)
+for (i in 1:n) {
+
+  true_reports_sample <- sample(true_reports, 7)
+  ag2017_data_resampled <- ag2017_data %>% filter(ArticleShort %in% true_reports_sample)
+
+  # Regressions
+  ag2017_discernment(ag2017_data_resampled)
+
+  # Populate data frame
+  ag2017_discern_true_resampled[i, "coeff_diff"] <- coeff_diff
+  ag2017_discern_true_resampled[i, "coeff_diff_p"] <- coeff_diff_p
+}
+
+ag2017_discern_true_resampled %<>%
+  mutate(sig = ifelse(coeff_diff_p < 0.05, TRUE, FALSE))
+
+ag2017_discern_true_sig_prop <- prop.table(table(ag2017_discern_true_resampled$sig))[["TRUE"]]
+
+ag2017_discern_true_plot <- ggplot(ag2017_discern_true_resampled,
+                                    aes(coeff_diff)) +
+  geom_histogram(aes(fill = sig), binwidth = 0.005) +
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", "Yes")) +
+  xlim(-0.15, 0.15) +
+  ggtitle("(A) True headlines") +
+  labs(x = "Differences (neg.: Democrats more correct)",
+       y = "Frequency", fill = "95%-Significance") +
+  theme_light()
+
+```
+
+In addition to assimilation bias, the paper by @AllcottGentzkow2017 also contains results about asymmetries in truth discernment. Separately for true and false stories, the authors regress whether a subject's belief is correct on a dummy for being liberal and a dummy for being conservative (columns 1 and 2 in Table 1 of the original paper). The coefficients differ for both true and false reports so that Democrats were more likely to disbelieve a false article, and Republicans more likely to believe a true article. The authors conclude "that in our data, Republicans were not generally worse at inference: instead, they tended to be more credulous of both true and false articles" (p. 228). According to Wald tests in their own code, differences between the two coefficients are statistically significant only for false headlines (p = `r round(ag2017_false_wald_p,2)`) but not for true headlines (p = `r round(ag2017_true_wald_p,2)`). This would suggest an ideological asymmetry in truth discernment in the sense that Republicans are worse at recognizing false information.
+
+To show whether this conclusion survives variation of the stimulus, I again build five hundred random sub-samples of items and re-test whether the difference of coefficients is significant. I do this separately for true and false headlines, like in the original paper. Panel A of Figure \@ref(fig:ag2017-plots) shows the distribution of results of resampling 7 out 10 true headlines. Positive values on the horizontal axis represent cases in which the conservative dummy coefficient is greater than the liberal dummy coefficient, which implies that Republicans are more likely to be correct about whether a headline is true or false. Statistically significant differences according to a Wald test are shaded. Panel B shows the equivalent for resampling 15 out of 20 false headlines. 
+
+Again, we can see that the authors could have easily arrived at a different conclusion with a different selection of information stimuli: For the false headlines, there is no significant asymmetry in `r round(ag2017_discern_false_sig_prop*100, 2)` percent of subsamples. In contrast, for the true headlines, there is a significant asymmetry in favour of Republicans in `r round(ag2017_discern_true_sig_prop*100, 2)` percent of subsamples. 
+
+```{r ag2017-plots-chunk, fig.cap="Replication of Allcott and Gentzkow (2017) - Truth discernment\\label{fig:ag2017-plots}", out.extra = '', fig.pos= "ht"}
+
+ggarrange(ag2017_discern_false_plot,
+          ag2017_discern_true_plot,
+          legend = "bottom", 
+          common.legend = TRUE)
+```
+
+\newpage
+
+## Pennycook & Rand (2019) Study 1: Truth discernment
+
+```{r pr20191-data}
+
+# Data from: https://osf.io/tuw89/ -> https://osf.io/h2kms/
+
+pr20191_data <- read.csv("data/Pennycook & Rand (Study 1).csv")
+
+# Create truth discernment scores
+
+fake_rep_headlines <- c("Fake1_2", "Fake2_2", "Fake3_2", "Fake4_2", "Fake5_2") 
+fake_dem_headlines <- c("Fake6_2", "Fake7_2", "Fake8_2", "Fake9_2", "Fake10_2")
+fake_neut_headlines <- c("Fake11_2", "Fake12_2", "Fake13_2", "Fake14_2", "Fake15_2")
+
+true_rep_headlines <- c("Real1_2", "Real2_2", "Real3_2", "Real4_2", "Real5_2") 
+true_dem_headlines <- c("Real6_2", "Real7_2", "Real8_2", "Real9_2", "Real10_2")
+true_neut_headlines <- c("Real11_2", "Real12_2", "Real13_2", "Real14_2", "Real15_2")
+
+## Non-z-scored discernment scores
+
+pr20191_data %<>% 
+  mutate(fake_dem_average = rowMeans(select(., fake_dem_headlines), na.rm = TRUE),
+         true_dem_average = rowMeans(select(., true_dem_headlines), na.rm = TRUE),
+         fake_rep_average = rowMeans(select(., fake_rep_headlines), na.rm = TRUE),
+         true_rep_average = rowMeans(select(., true_rep_headlines), na.rm = TRUE),
+         fake_neut_average = rowMeans(select(., fake_neut_headlines), na.rm = TRUE),
+         true_neut_average = rowMeans(select(., true_neut_headlines), na.rm = TRUE))
+
+pr20191_data %<>% 
+  mutate(dem_discernment = (true_dem_average - fake_dem_average)/4,
+         rep_discernment = (true_rep_average - fake_rep_average)/4,
+         neut_discernment = (true_neut_average - fake_neut_average)/4)
+
+pr20191_data %<>% 
+  mutate(fake_average = rowMeans(select(., fake_rep_headlines, fake_dem_headlines,
+                                        fake_neut_headlines), na.rm = TRUE),
+         true_average = rowMeans(select(., true_rep_headlines, true_dem_headlines,
+                                         true_neut_headlines), na.rm = TRUE))
+
+## Z-scored discernment scores
+
+pr20191_data %<>% mutate(fake_dem_average_z = scale(fake_dem_average),
+                       true_dem_average_z = scale(true_dem_average),
+                       fake_rep_average_z = scale(fake_rep_average),
+                       true_rep_average_z = scale(true_rep_average),
+                       fake_neut_average_z = scale(fake_neut_average),
+                       true_neut_average_z = scale(true_neut_average))
+                       
+pr20191_data %<>% 
+  mutate(dem_discernment_z = (true_dem_average_z - fake_dem_average_z),
+         rep_discernment_z = (true_rep_average_z - fake_rep_average_z),
+         neut_discernment_z = (true_neut_average_z - fake_neut_average_z))
+
+pr20191_data %<>% mutate(fake_average_z = scale(fake_average),
+                                true_average_z = scale(true_average))
+
+pr20191_data %<>% mutate(discernment_z = true_average_z - fake_average_z)
+
+# Compare to original coding
+## cor(pr20191_data$Discernment, pr20191_data$discernment_z)
+## cor(pr20191_data$L_Discernment, pr20191_data$dem_discernment_z)
+## cor(pr20191_data$L_Discernment, pr20191_data$dem_discernment_z)
+## cor(pr20191_data$C_Discernment, pr20191_data$C_Discernment)
+## cor(pr20191_data$N_Discernment, pr20191_data$neut_discernment_z)
+
+```
+
+```{r pr20191-functions}
+
+discernment_ttest <- function(data) {
+  
+  discernment_test <<- data %>% 
+    mutate(id = 1:nrow(.)) %>%
+    convert_as_factor(ClintonTrump) %>%
+    select(c(ClintonTrump, id, discernment_z)) %>% 
+    t.test(discernment_z ~ ClintonTrump, data = .)
+  
+  discernment_dem <<- discernment_test$estimate[["mean in group 1"]]
+  discernment_rep <<- discernment_test$estimate[["mean in group 2"]]
+  discernment_diff <<- discernment_rep - discernment_dem
+  discernment_ttest_p <<- discernment_test$p.value
+
+}
+
+discernment_valence_anova <- function(data) {
+  
+  discernment_valence_aov <<- data %>% 
+    filter(!is.na(ClintonTrump)) %>%
+    mutate(id = 1:nrow(.)) %>%
+    select(c(ClintonTrump, id, dem_discernment_z, 
+             rep_discernment_z, neut_discernment_z)) %>% 
+    convert_as_factor(id, ClintonTrump) %>% 
+    pivot_longer(cols = c(dem_discernment_z, rep_discernment_z, neut_discernment_z), 
+               names_to = "Valence", values_to = "Discernment") %>% 
+    anova_test(Discernment ~ ClintonTrump*Valence + Error(id/Valence), data = .)
+  
+  discernment_anova_p <<- discernment_valence_aov$ANOVA[1, "p"]
+  
+}
+
+```
+
+```{r pr20191-original}
+
+# ANOVA p. 5 
+## "The media truth discernment scores were entered into a 3 (Democrat-consistent, Repub- lican-consistent, Neutral) × 2 (Clinton support, Trump support) mixed design ANOVA."
+
+discernment_valence_anova(pr20191_data) # this is the same is in original paper
+
+```
+
+```{r pr20191-robust}
+
+# Random re-sampling mechanism
+
+k <- 4 # Number of headlines sampled from each type: fake/true*rep/dem/neut
+n <- 500 # Number of new samples
+
+pr20191_robustness <- data.frame(sample = 1:n,
+                                 discernment_dem = NA,
+                                 discernment_rep = NA,
+                                 discernment_diff = NA,
+                                 discernment_ttest_p = NA,
+                                 discernment_anova_p = NA)
+
+set.seed(1404)
+
+for (i in 1:n) {
+  
+  # Sample headlines out of each of four categories 
+  fake_dem_headlines_sample <- sample(fake_dem_headlines, k, replace = FALSE)
+  true_dem_headlines_sample <- sample(true_dem_headlines, k, replace = FALSE)
+  fake_rep_headlines_sample <- sample(fake_rep_headlines, k, replace = FALSE)
+  true_rep_headlines_sample <- sample(true_rep_headlines, k, replace = FALSE)
+  fake_neut_headlines_sample <- sample(fake_neut_headlines, k, replace = FALSE)
+  true_neut_headlines_sample <- sample(true_neut_headlines, k, replace = FALSE)
+  
+  # Compute discernment scores by valence for ANOVA
+  pr20191_data_resampled <- pr20191_data %>% 
+    mutate(fake_dem_average_z = 
+             scale(rowMeans(select(., fake_dem_headlines_sample), na.rm = TRUE)),
+           true_dem_averagee_z = 
+             scale(rowMeans(select(., true_dem_headlines_sample), na.rm = TRUE)),
+           fake_rep_average_z = 
+             scale(rowMeans(select(., fake_rep_headlines_sample), na.rm = TRUE)),
+           true_rep_average_z = 
+             scale(rowMeans(select(., true_rep_headlines_sample), na.rm = TRUE)),
+           fake_neut_average_z = 
+             scale(rowMeans(select(., fake_neut_headlines_sample), na.rm = TRUE)),
+           true_neut_average_z = 
+             scale(rowMeans(select(., true_neut_headlines_sample), na.rm = TRUE))) %>%
+    mutate(dem_discernment_z = (true_dem_average_z - fake_dem_average_z),
+           rep_discernment_z = (true_rep_average_z - fake_rep_average_z),
+           neut_discernment_z = (true_neut_average_z - fake_neut_average_z))
+  
+  # Compute discernment scores for t-test
+  pr20191_data_resampled %<>% 
+    mutate(fake_average_z = scale(rowMeans(select(., fake_rep_headlines_sample,
+                                                  fake_dem_headlines_sample,
+                                                  fake_neut_headlines_sample), na.rm = TRUE)),
+           true_average_z =  scale(rowMeans(select(., true_rep_headlines_sample,
+                                                   true_dem_headlines_sample,
+                                                    true_neut_headlines_sample), na.rm = TRUE)))
+  pr20191_data_resampled %<>% mutate(discernment_z = true_average_z - fake_average_z)
+
+  # t-test
+  discernment_ttest(pr20191_data_resampled)
+
+  # ANOVA
+  discernment_valence_anova(pr20191_data_resampled)
+
+  # Populate data frame of results
+  pr20191_robustness[i, "discernment_dem"] <- discernment_dem
+  pr20191_robustness[i, "discernment_rep"] <- discernment_rep
+  pr20191_robustness[i, "discernment_diff"] <- discernment_diff
+  pr20191_robustness[i, "discernment_ttest_p"] <- discernment_ttest_p
+  pr20191_robustness[i, "discernment_anova_p"] <- discernment_anova_p
+}
+
+pr20191_robustness %<>% mutate(sig = ifelse(discernment_ttest_p < 0.05, TRUE, FALSE))
+
+```
+
+Study 1 in @PennycookRand2019a contains another analysis pertaining to asymmetries in truth discernment that is similar to Study 2. Subjects read 15 true and 15 false headlines that the authors classify as either congruent for Democrats or Republicans or neither. Note that 14 of those 30 headlines are also used in Study 2 analysed in my main paper. @PennycookRand2019a construct individual-level truth discernment values (z-scored) and test whether these differ across partisanship and valence: "Truth discernment scores were entered into a 3 (Democrat-consistent, Republican-consistent, Neutral) × 2 (Clinton support, Trump support) mixed design ANOVA." (p. 5). They find a main effect for political ideology such that "Clinton supporters were better able to discern fake from real news across the full range of items than Trump supporters" (p.5).
+
+I first replicated this result of the ANOVA, yielding the same results. As in the main paper, the asymmetry is illustrated by plotting discernment scores by partisanship and congruence, as shown in Panel A of Figure \@ref(fig:pr20191-plot) below. I then resampled four out of the five headlines in each category (false neutral, true neutral, false liberal, true liberal, false conservative, true conservative). For each new sample, I computed a difference between average truth discernment of Democrats and Republicans, and re-ran the ANOVA each time. Figure \@ref(fig:pr20191-plot) plots these differences and ANOVA 95%-significances across samples. It shows that in contrast to Study 2, the results are robust against the variation of the stimuli.
+
+```{r pr20191-plot-chunk, fig.cap="Replication of Pennycook and Rand 2019 Study 1\\label{fig:pr20191-plot}", out.extra = '', fig.pos= "ht"}
+
+pr20191_discernment <- pr20191_data %>% 
+  mutate(id = 1:nrow(pr20191_data)) %>%
+  select(c(ClintonTrump, id, fake_average, true_average)) %>% 
+  filter(!is.na(ClintonTrump)) %>%
+  convert_as_factor(ClintonTrump) %>%
+  group_by(ClintonTrump) %>%
+  get_summary_stats(fake_average, true_average, type = "common")
+
+lab_con <- paste("diff. = ", as.character(pr20191_discernment[2, "mean"] - pr20191_discernment[1, "mean"]))
+lab_lib <- paste("diff. = ", as.character(pr20191_discernment[4, "mean"] - pr20191_discernment[3, "mean"]))
+
+pr20191_discernment_plot <- pr20191_discernment %>% 
+  ggplot(aes(x = ClintonTrump, y = mean, fill = variable)) +
+  geom_bar(stat="identity", position = position_dodge()) + 
+  geom_errorbar(aes(ymin = mean-ci, ymax = mean + ci),
+                width=.2, position = position_dodge(.9)) +
+  # ylim(1, 4) +
+  # geom_signif(comparisons=list(c("1", "2")), annotations="***",
+  #             y_position = 3.5, tip_length = 0, vjust = 0) +
+  ggplot2::annotate(geom = "text", x=0.7, y=3,
+                    label = lab_con,
+                    size = 3, hjust=0, vjust=1) +
+  ggplot2::annotate(geom="text", x=1.7, y=3,
+                    label = lab_lib,
+                    size = 3, hjust=0, vjust=1) +
+  labs(x = "", y = "Belief", fill = "Truth") +
+  scale_fill_manual(values = c("grey70", "grey30"),
+                    labels = c("False", 
+                               "True")) +
+  scale_x_discrete(labels = c("Clinton voters",
+                              "Trump voters")) +
+  scale_y_continuous(limits = c(1, 4), oob = rescale_none) + 
+  theme_light() + 
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank()) 
+
+pr20191_resampled_plot <- ggplot(pr20191_robustness, 
+       aes(discernment_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 1/100) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("Yes", "No")) +
+  xlim(-0.7, 0.7) +
+  labs(x = "Differences (negative: Clinton voters more discerning)", 
+       y = "Frequency", fill = "95%-Significance") +
+  theme_light() 
+
+ggarrange(pr20191_discernment_plot, 
+          pr20191_resampled_plot,
+          legend = "bottom")
+
+```
+
+The fact that results vary between Study 1 and Study 2 is remarkable insofar as set of items partly overlap. This suggests the following about items included in Study 1 but not Study 2: If false, they are a lot more believable to Trump voters than Clinton voters, and if true, are a lot more believable to Clinton voters than Trump voters. In contrast, items included in Study 2 but not Study 1 should be discerned at a similar level for Trump voters and Clinton voters. Figure \@ref(fig:pr20191-2-plot) shows that this is indeed the case. Panel A plots average belief of headlines only included in Study 1, grouped by individual partisanship and headline truth. It shows that Trump voters are less discerning for these headlines. In contrast, truth discernment is similar for headlines only included in Study 2, as shown in Panel B. This illustrates my main point in another way. Study 1 found a very robust ideological asymmetry. However, exchange some of the informational stimuli, and you might find the same asymmetry, but a look behind the scenes reveals that it is not robust. This suggests that testing robustness of results might not even be enough, and sampling of stimuli is even more important.
+
+```{r pr20191-pr20192, fig.cap="Pennycook and Rand (2019) Study 1 vs. Study 2\\label{fig:pr20191-2-plot}", out.extra = '', fig.pos= "ht"}
+
+# lab_con <- paste("diff. = ", as.character(pr20191_discernment[2, "mean"] - pr20191_discernment[1, "mean"]))
+# lab_lib <- paste("diff. = ", as.character(pr20191_discernment[4, "mean"] - pr20191_discernment[3, "mean"]))
+
+pr20191_only_plot <- pr20191_data %>% 
+  select(ClintonTrump, Fake10_2, Fake2_2, Fake3_2, Real9_2, Real2_2, Real4_2, Real5_2) %>%
+  filter(!is.na(ClintonTrump)) %>%
+  pivot_longer(cols = c(Fake10_2, Fake2_2, Fake3_2, Real9_2, Real2_2, Real4_2, Real5_2), 
+              names_to = "headline", values_to = "belief") %>%
+  mutate(truth = ifelse(grepl("Fake", .$headline), "False", "True"),
+         ClintonTrump = as.factor(ClintonTrump)) %>%
+  group_by(ClintonTrump, truth) %>%
+  get_summary_stats(belief, type = "full") %>%
+  ggplot(aes(x = ClintonTrump, y = mean, fill = factor(truth))) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = mean-ci, ymax = mean + ci),
+                width=.2, position = position_dodge(.9)) +
+  labs(x = "Partisanship", y = "Belief", fill = "Truth") +
+  scale_fill_manual(values = c("grey70", "grey30")) +
+  scale_x_discrete(labels = c("Clinton", 
+                              "Trump")) +
+  scale_y_continuous(limits = c(1, 4), oob = rescale_none) + 
+  ggtitle("(A) Items only in Study 1") +
+  theme_light()
+
+pr20192_only_plot <- pr20192_data %>% 
+  select(ClintonTrump, Fake7_2, Fake8_2, Fake2_2, Fake4_2, Fake6_2, 
+         Real7_2, Real8_2, Real2_2, Real3_2, Real4_2, Real6_2) %>%
+  filter(!is.na(ClintonTrump)) %>%
+  pivot_longer(cols = c(Fake7_2, Fake8_2, Fake2_2, Fake4_2, Fake6_2, Real7_2, Real8_2,
+                        Real2_2, Real3_2, Real4_2, Real6_2), 
+               names_to = "headline", values_to = "belief") %>%
+  mutate(truth = ifelse(grepl("Fake", .$headline), "False", "True"),
+         ClintonTrump = as.factor(ClintonTrump)) %>%
+  group_by(ClintonTrump, truth) %>%
+  get_summary_stats(belief, type = "full") %>%
+  ggplot(aes(x = ClintonTrump, y = mean, fill = factor(truth))) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = mean-ci, ymax = mean + ci),
+                width=.2, position = position_dodge(.9)) +
+  labs(x = "Partisanship", y = "Belief", fill = "Truth") +
+  scale_fill_manual(values = c("grey70", "grey30")) +
+  scale_x_discrete(labels = c("Clinton", 
+                              "Trump")) +
+  scale_y_continuous(limits = c(1, 4), oob = rescale_none) + 
+  ggtitle("(B) Items only in Study 2") +
+  theme_light() 
+
+ggarrange(pr20191_only_plot, pr20192_only_plot,
+          legend = "bottom", common.legend = TRUE)
+
+
+```
+
+\newpage
+
+## Farago et al. 2019: Assilimation bias
+
+```{r farago-data}
+
+# Data from: https://osf.io/372fm/
+
+farago_data = read_sav("data/Study 2.sav")
+
+# Define valence of headlines
+
+headlines_pro <- c("PG1", "PG2", "PG3", "PG4", "PG5")
+headlines_anti <- c("AG1", "AG2", "AG3", "AG4", "AG5")
+
+```
+
+@Faragoetal2019 [, Study 2] ask a sample of 382 Hungarian students to judge the truth of 17 headlines. The authors are interestd in the contrast between supporters of the right-wing governing party Fidesz and opposition supporters. Five of the headlines are fake "pro-government", e.g. claiming that "The European Public Prosecutor has released the Hungarian government in all current corruption cases"; five are fake "anti-government" headlines, e.g. "The leaders of the conservative European People's Party (family party of Fidesz in the European Parliament) issued a joint statement that Fidesz will be excluded from their members in the coming months". The remaining seven headlines do not figure in their analysis.
+
+In their main analyis, they separately build path models for pro-government fake news and anti-government fake news, testing for mediating effects of economic sentiment and perceived independence of source. They find assimilation bias for both kind of news: Pro-government subjects find pro-government headlines more plausible as anti-government headlines, and vice versa for anti-government subjects. They do not directly compare whether these effect sizes differ in magnitude, but conclude: "Our findings suggest that the phenomenon of believing in fake news may be more symmetrical between people with different political affiliations and preferences than previous research suggested" (p. 12). However, Table 3 on page 9 suggest that those opposing the government make a slightly bigger difference between the two types of headlines than government supporters. 
+
+```{r farago-original}
+
+# Compute belief averages
+
+farago_data %<>% 
+  mutate(pro_government_mean = rowMeans(select(., headlines_pro),  na.rm = TRUE),
+         anti_government_mean = rowMeans(select(., headlines_anti),  na.rm = TRUE))
+
+# Bring data into long format
+
+farago_data_long <- farago_data %>%
+  mutate(id = 1:nrow(.)) %>%
+  select(id, Partisanship, pro_government_mean, anti_government_mean) %>%
+  pivot_longer(cols = c("pro_government_mean", "anti_government_mean"),
+               names_to = "valence", values_to = "belief") %>%
+  mutate(congruence = 
+           case_when(valence == "pro_government_mean" & Partisanship == 1 ~ "congruent",
+                     valence == "pro_government_mean" & Partisanship == 0 ~ "incongruent",
+                     valence == "anti_government_mean" & Partisanship == 1 ~ "incongruent",
+                     valence == "anti_government_mean" & Partisanship == 0 ~ "congruent"))
+
+# Anova 
+
+farago_aov_original <- farago_data_long %>% 
+  select(-c(valence)) %>%
+  anova_test(data = .,  dv = belief, wid = id, 
+    between = Partisanship, within = congruence)
+
+```
+
+As the authors did not publish their code and the exact model specifications are thus unknown, the main analysis (mediation analysis using bootstrapping with 2,000 resamples and a model building/model trimmming technique) was impossible to reproduce. I therefore made do with a simpler analytical approach that seems to be in the spirit of Table 3. I first replicated the average belief of headlines, grouped by partisanship and ideological valence (pro- vs. anti-government) in the left panel of Figure \@ref(fig:farago-plots). I then build individual-level belief averages, separately for pro- and anti-government headlines and build another variable whether these averages refer to congruent or incongruent headlines. I then enter them into a mixed two-way ANOVA (partisanship by headline congruence). As suggested by the author's conclusion, the interaction between partisansip and congruence is marginally insignificant (F (1, 380) = `r farago_aov_original[3, "F"]`, p  = `r farago_aov_original[3, "p"]`), suggesting a ideological symmetry in assimilation bias. 
+
+Next, I rerun the analyses for samples based on four out of five headlines in both categories. Since there are only 25 combinations possible, I build new samples for all of them. For each sample, I first compute a difference of bias, i.e. the belief differentials for pro- and anti-government subjects. A positive value shows that government supporters are more biased. Second, I run the same ANOVA model for each sample. The right panel of Figure \@ref(fig:farago-plots) shows the distribution of differences under this procedure. It suggest that the authors could have arrived at a different conclusion about asymmetries, had they selected a different subset of stimuli.
+
+```{r farago-robust}
+
+# Build all permutations of 4 out of 5 for both categories
+
+samples <- gtools::combinations(n = 10, r = 8,  v = c(headlines_pro, headlines_anti)) %>% 
+  as.matrix() %>% as.data.frame() %>%
+  unite("all", starts_with("V"), sep = ", ") %>%
+  mutate(n_anti = str_count(all, pattern = "AG")) %>% filter(n_anti == 4) %>%
+  select(-n_anti) %>%
+  separate(all, letters[1:8]) %>%
+  mutate(index = 1:nrow(.))
+
+farago_robust <- data.frame(sample = 1:nrow(samples),
+                            bias_pro = NA,
+                            bias_anti = NA,
+                            bias_diff = NA,
+                            anova_p = NA)
+
+# Go through all combinations
+
+for (i in 1:nrow(samples)) {
+  
+  headlines_anti_sample <- unname(unlist(samples[i, 1:4]))
+  headlines_pro_sample <- unname(unlist(samples[i, 5:8]))
+  
+  # Compute new averages
+  farago_data_sampled <- farago_data %>% 
+    mutate(pro_government_mean = rowMeans(select(., headlines_pro_sample),  na.rm = TRUE),
+           anti_government_mean = rowMeans(select(., headlines_anti_sample),  na.rm = TRUE))
+
+  # Bring data into long format
+  farago_data_sampled %<>%
+    mutate(id = 1:nrow(.)) %>%
+    select(id, Partisanship, pro_government_mean, anti_government_mean) %>%
+    pivot_longer(cols = c("pro_government_mean", "anti_government_mean"),
+               names_to = "valence", values_to = "belief") %>%
+    mutate(congruence = 
+           case_when(valence == "pro_government_mean" & Partisanship == 1 ~ "congruent",
+                     valence == "pro_government_mean" & Partisanship == 0 ~ "incongruent",
+                     valence == "anti_government_mean" & Partisanship == 1 ~ "incongruent",
+                     valence == "anti_government_mean" & Partisanship == 0 ~ "congruent"))
+  
+  # Compute difference in assimilation bias
+  diffs <- farago_data_sampled %>%
+    group_by(Partisanship, congruence) %>%
+    get_summary_stats(belief)
+  bias_anti <- diffs$mean[diffs$Partisanship == 0 & diffs$congruence == "congruent"] -
+    diffs$mean[diffs$Partisanship == 0 & diffs$congruence == "incongruent"]
+  bias_pro <- diffs$mean[diffs$Partisanship == 1 & diffs$congruence == "congruent"] -
+    diffs$mean[diffs$Partisanship == 1 & diffs$congruence == "incongruent"]
+  bias_diff <- bias_pro - bias_anti
+  
+  # Run anova 
+  farago_aov_sampled <- farago_data_sampled %>% 
+    select(-c(valence)) %>%
+    anova_test(data = .,  dv = belief, wid = id, 
+    between = Partisanship, within = congruence)
+  anova_p <- farago_aov_sampled[3, "p"]
+  
+  # Build data frame
+  farago_robust[i, "bias_pro"] <- bias_pro
+  farago_robust[i, "bias_anti"] <- bias_anti
+  farago_robust[i, "bias_diff"] <- bias_diff
+  farago_robust[i, "anova_p"] <- anova_p
+
+}
+
+farago_robust %<>% mutate(sig = ifelse(anova_p < 0.05, TRUE, FALSE))
+
+```
+
+```{r farago-plots-chunk, fig.cap="Replication of Farago et al. (2019)\\label{fig:farago-plots}", out.extra = '', fig.pos= "ht"}
+
+# original differences
+
+farago_original_plot <- farago_data %>%  
+  select(c(starts_with("PG", ignore.case = FALSE), 
+           starts_with("AG", ignore.case = FALSE)), Partisanship) %>% 
+  mutate(id = 1:nrow(.)) %>%
+  pivot_longer(cols = c(starts_with("PG"), starts_with("AG")), 
+               names_to = "headline", values_to = "belief") %>%
+  mutate(valence = 
+           as.factor(ifelse(grepl("AG", .$headline), "anti-government", "pro-government")),
+         Partisanship = as.factor(Partisanship)) %>%
+  group_by(Partisanship, valence) %>%
+  get_summary_stats(belief, type = c("full")) %>%
+  ggplot(aes(x = Partisanship, y = mean, fill = valence)) +
+  geom_bar(stat="identity", position = position_dodge()) + 
+  geom_errorbar(aes(ymin = mean-ci, ymax = mean + ci),
+                width=.2, position = position_dodge(.9)) +
+  labs(x = "", y = "Belief", fill = "Valence") +
+  scale_fill_manual(values = c("grey70", "grey30"),
+                    labels = c("Anti-government", 
+                               "Pro-government")) +
+  scale_x_discrete(labels = c("Gov. opponents", 
+                               "Gov. supporters")) +
+  ylim(0, 7) +
+  theme_light() + 
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank()) 
+
+# Significances
+
+farago_sig_plot <- ggplot(farago_robust, aes(bias_diff)) + 
+  geom_histogram(aes(fill = sig), binwidth = 1/4) + 
+  scale_fill_manual(values = c("grey90", "grey25"),
+                    labels = c("No", "Yes")) +
+  xlim(-2, 2) +
+  labs(x = "Differences (neg.: gov. opponents more biased)", 
+       y = "Frequency", fill = "95%-Significance") +
+  theme_light() 
+
+ggarrange(farago_original_plot, 
+            farago_sig_plot,
+            legend = "bottom")
+
+```
+
+<!-- What else I could do: -->
+
+<!-- - Ross et al. 2019: Only reporting correlations between CRT and truth discernment, separately for Dems and Reps; I could just reproduce these correlations -->
+<!-- - Pennycook et al. 2019b: Either add additional partisanship variable for accuracy outcome, or replicate for Party * Concordance dummy  -->
+
+<!-- ## Miller et al. 2016 -->
+
+\clearpage
+
+# References
