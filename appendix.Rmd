@@ -1,7 +1,7 @@
 ---
 title: |
   |
-  | \vspace{1cm}Truth and bias: Biased findings^[Corresponding author: Bernhard Clemm von Hohenberg, bernhard.clemm@eui.eu.]\vspace{0.5cm}
+  | \vspace{1cm}Truth and bias: Biased findings^[European University Institute, Via dei Roccettini 9, 50014 San Domenico di Fiesole, Italy. Email: bernhard.clemm@eui.eu. Orcid ID: 0000-0002-6976-9745. This manuscript is based on a fully reproducible RMarkdown file that contains code to replicate all graphs and analyses.]\vspace{0.5cm}
   | APPENDIX
   |
 author: |
